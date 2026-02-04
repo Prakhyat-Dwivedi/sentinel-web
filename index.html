@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sentinel – Sensor Intelligence</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<h2>📊 Sentinel – Sensor Intelligence</h2>
+
+<div class="controls">
+  <select id="sensorType">
+    <option value="">Select Sensor</option>
+    <option value="battery">Battery Health</option>
+    <option value="wifi">WiFi Quality</option>
+  </select>
+  <button onclick="runAnalysis()">Run Analysis</button>
+</div>
+
+<div id="countdown" class="countdown hidden"></div>
+
+<div class="dashboard">
+
+  <!-- GRAPH -->
+  <canvas id="chart"></canvas>
+
+  <!-- METRICS TABLE -->
+  <table class="metrics">
+    <tr><th>Metric</th><th>Value</th></tr>
+    <tr><td>Status</td><td id="mStatus">–</td></tr>
+    <tr><td>Confidence</td><td id="mConfidence">–</td></tr>
+    <tr><td>Health Index</td><td id="mHealth">–</td></tr>
+  </table>
+
+</div>
+
+<!-- SUMMARY -->
+<div id="summary" class="summary hidden"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

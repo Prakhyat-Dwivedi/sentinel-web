@@ -1,0 +1,90 @@
+body {
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #f1f5f9;
+  padding: 14px;
+  text-align: center;
+}
+
+.controls {
+  margin-bottom: 12px;
+}
+
+select, button {
+  padding: 8px 14px;
+  font-size: 15px;
+}
+
+button {
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  transform: scale(1.03);
+}
+
+.countdown {
+  font-weight: bold;
+  margin: 10px;
+}
+
+.hidden {
+  display: none;
+}
+
+.dashboard {
+  max-width: 700px;
+  margin: auto;
+}
+
+canvas {
+  width: 100% !important;
+  height: 260px !important;
+  background: white;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.metrics {
+  width: 100%;
+  margin-top: 12px;
+  border-collapse: collapse;
+  background: white;
+}
+
+.metrics th, .metrics td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.metrics th {
+  background: #2563eb;
+  color: white;
+}
+
+.summary {
+  margin: 14px auto;
+  padding: 10px;
+  max-width: 600px;
+  font-weight: bold;
+  border-radius: 8px;
+}
+
+.summary.HEALTHY {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.summary.WARNING {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.summary.CRITICAL {
+  background: #fee2e2;
+  color: #991b1b;
+}
