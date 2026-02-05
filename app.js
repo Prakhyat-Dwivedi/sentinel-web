@@ -8,10 +8,7 @@ let timer = null;
 /* ================= INIT GRAPH ================= */
 window.addEventListener("DOMContentLoaded", () => {
   const canvas = document.getElementById("chart");
-  if (!canvas) {
-    console.error("Canvas not found");
-    return;
-  }
+  if (!canvas) return;
 
   const ctx = canvas.getContext("2d");
 
@@ -20,25 +17,24 @@ window.addEventListener("DOMContentLoaded", () => {
     data: {
       labels: [],
       datasets: [{
-        label: "Sensor Value (%)",
+        label: "Battery Level (%)",
         data: [],
         borderColor: "#2563eb",
-        backgroundColor: "rgba(37,99,235,0.1)",
+        backgroundColor: "rgba(37,99,235,0.15)",
         tension: 0.3,
-        fill: true
+        fill: true,
+        pointRadius: 3
       }]
     },
     options: {
       responsive: true,
       animation: false,
       scales: {
-        x: {
-          title: { display: true, text: "Time" }
-        },
+        x: { title: { display: true, text: "Time" } },
         y: {
           min: 0,
           max: 100,
-          title: { display: true, text: "Value (%)" }
+          title: { display: true, text: "Battery %" }
         }
       }
     }
@@ -62,23 +58,22 @@ function resetUI() {
   }
 }
 
-/* ================= FETCH DATA ================= */
-async function fetchData(type) {
-  const res = await fetch(`${API_BASE}/${type}`);
+/* ================= FETCH ================= */
+async function fetchBattery() {
+  const res = await fetch(`${API_BASE}/battery`);
   const data = await res.json();
 
-  if (data.error) {
-    throw new Error(data.error);
+  if (!data.available) {
+    throw new Error("Battery data not available");
   }
-
   return data;
 }
 
 /* ================= RUN ANALYSIS ================= */
 async function runAnalysis() {
   const type = document.getElementById("sensorType").value;
-  if (!type) {
-    alert("Please select a sensor");
+  if (type !== "battery") {
+    alert("Select Battery Health for this analysis");
     return;
   }
 
@@ -88,8 +83,9 @@ async function runAnalysis() {
   countdown.classList.remove("hidden");
 
   let timeLeft = DURATION;
-  let lastValue = 0;
-  let statusText = "";
+  let startPercent = null;
+  let lastPercent = null;
+  let chargingState = false;
 
   clearInterval(timer);
 
@@ -97,20 +93,17 @@ async function runAnalysis() {
     countdown.innerText = `Analyzing… ${timeLeft}s`;
 
     try {
-      const data = await fetchData(type);
+      const data = await fetchBattery();
 
-      if (type === "battery") {
-        lastValue = data.percent;
-        statusText = data.charging ? "Charging" : "Discharging";
-      }
+      lastPercent = data.percent;
+      chargingState = data.charging;
 
-      if (type === "wifi") {
-        lastValue = data.signal_percent;
-        statusText = `Connected to ${data.ssid}`;
+      if (startPercent === null) {
+        startPercent = data.percent;
       }
 
       chart.data.labels.push(new Date().toLocaleTimeString());
-      chart.data.datasets[0].data.push(lastValue);
+      chart.data.datasets[0].data.push(data.percent);
       chart.update();
 
     } catch (err) {
@@ -126,27 +119,35 @@ async function runAnalysis() {
       clearInterval(timer);
       countdown.classList.add("hidden");
 
-      // FINAL METRICS
-      document.getElementById("mStatus").innerText = statusText;
-      document.getElementById("mConfidence").innerText = lastValue + "%";
+      const delta = lastPercent - startPercent;
+
+      // TABLE UPDATE
+      document.getElementById("mStatus").innerText =
+        chargingState ? "Charging" : delta < 0 ? "Discharging" : "Stable";
+
+      document.getElementById("mConfidence").innerText =
+        Math.abs(delta) + "% change";
+
       document.getElementById("mHealth").innerText =
-        lastValue >= 70 ? "Healthy" :
-        lastValue >= 40 ? "Warning" :
-        "Critical";
+        chargingState
+          ? "Charging"
+          : delta < 0
+          ? "Battery Consumption"
+          : "Stable Level";
 
       // SUMMARY
       const summary = document.getElementById("summary");
       summary.classList.remove("hidden");
 
-      if (lastValue >= 70) {
+      if (chargingState) {
         summary.className = "summary HEALTHY";
-        summary.innerText = "System operating normally";
-      } else if (lastValue >= 40) {
+        summary.innerText = "Charging detected — battery level stable";
+      } else if (delta < 0) {
         summary.className = "summary DRIFTING";
-        summary.innerText = "Moderate degradation detected";
+        summary.innerText = "Battery discharging observed in short window";
       } else {
-        summary.className = "summary FAULTY";
-        summary.innerText = "Critical condition detected";
+        summary.className = "summary HEALTHY";
+        summary.innerText = "Battery level stable in short observation window";
       }
     }
   }, 1000);
