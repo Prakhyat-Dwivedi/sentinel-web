@@ -35,12 +35,13 @@ function resetUI() {
   document.getElementById("mStatus").innerText = "–";
   document.getElementById("mConfidence").innerText = "–";
   document.getElementById("mHealth").innerText = "–";
-
   document.getElementById("summary").classList.add("hidden");
 
   chart.data.labels = [];
   chart.data.datasets[0].data = [];
   chart.update();
+
+  clearInterval(timer);
 }
 
 /* ---------- FETCH ---------- */
@@ -60,49 +61,55 @@ async function runAnalysis() {
   countdown.classList.remove("hidden");
 
   timeLeft = DURATION;
-  let lastValue = 0;
+  let samples = [];
   let statusText = "";
 
-  clearInterval(timer);
   timer = setInterval(async () => {
     countdown.innerText = `Analyzing… ${timeLeft}s`;
 
     const data = await fetchData(type);
+    let value = 0;
 
     if (type === "battery") {
-      lastValue = data.percent;
+      value = data.percent;
       statusText = data.charging ? "Charging" : "Discharging";
     }
 
     if (type === "wifi") {
-      lastValue = data.signal_percent;
+      value = data.signal_percent;
       statusText = `Connected (${data.ssid})`;
     }
 
+    samples.push(value);
+
     chart.data.labels.push(new Date().toLocaleTimeString());
-    chart.data.datasets[0].data.push(lastValue);
+    chart.data.datasets[0].data.push(value);
     chart.update();
 
     timeLeft--;
 
-    if (timeLeft < 0) {
+    if (timeLeft === 0) {
       clearInterval(timer);
       countdown.classList.add("hidden");
 
+      const avg = Math.round(
+        samples.reduce((a, b) => a + b, 0) / samples.length
+      );
+
       document.getElementById("mStatus").innerText = statusText;
-      document.getElementById("mConfidence").innerText = lastValue + "%";
+      document.getElementById("mConfidence").innerText = avg + "%";
       document.getElementById("mHealth").innerText =
-        lastValue >= 70 ? "Healthy" : lastValue >= 40 ? "Warning" : "Critical";
+        avg >= 70 ? "Healthy" : avg >= 40 ? "Warning" : "Critical";
 
       const summary = document.getElementById("summary");
       summary.classList.remove("hidden");
-      summary.className = "summary " +
-        (lastValue >= 70 ? "HEALTHY" : lastValue >= 40 ? "WARNING" : "CRITICAL");
+      summary.className =
+        "summary " + (avg >= 70 ? "HEALTHY" : avg >= 40 ? "WARNING" : "CRITICAL");
 
       summary.innerText =
-        lastValue >= 70
+        avg >= 70
           ? "System operating normally"
-          : lastValue >= 40
+          : avg >= 40
           ? "Moderate degradation detected"
           : "Poor condition detected";
     }
