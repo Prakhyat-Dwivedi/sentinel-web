@@ -68,30 +68,28 @@ async function fetchData(type) {
 /* ================= RUN ANALYSIS ================= */
 async function runAnalysis() {
   const type = document.getElementById("sensorType").value;
-  // ----- Update table labels based on sensor -----
-const confidenceCell = document.querySelector(
-  ".metrics tr:nth-child(3) td:first-child"
-);
 
-const confidenceCell = document.querySelector(
-  ".metrics tr:nth-child(3) td:first-child"
-);
-const healthCell = document.querySelector(
-  ".metrics tr:nth-child(4) td:first-child"
-);
-
-if (type === "battery") {
-  confidenceCell.innerText = "Battery Reliability";
-  healthCell.innerText = "Battery Percentage";
-}
-
-if (type === "wifi") {
-  confidenceCell.innerText = "Signal Intensity";
-  healthCell.innerText = "Signal Quality";
-}
   if (!type) {
     alert("Please select a sensor");
     return;
+  }
+
+  // ----- Update table labels based on sensor -----
+  const confidenceCell = document.querySelector(
+    ".metrics tr:nth-child(3) td:first-child"
+  );
+  const healthCell = document.querySelector(
+    ".metrics tr:nth-child(4) td:first-child"
+  );
+
+  if (type === "battery") {
+    confidenceCell.innerText = "Battery Reliability";
+    healthCell.innerText = "Battery Percentage";
+  }
+
+  if (type === "wifi") {
+    confidenceCell.innerText = "Signal Intensity";
+    healthCell.innerText = "Signal Quality";
   }
 
   resetUI();
@@ -139,23 +137,24 @@ if (type === "wifi") {
 
       /* ===== FINAL METRICS ===== */
       if (type === "battery") {
-        let healthText = "";
+        let statusText = "";
         let summaryText = "";
 
         if (latestData.charging) {
-          healthText = "Charging (Normal)";
+          statusText = "Charging (Normal)";
           summaryText = "Battery is charging normally";
         } else if (latestData.delta < 0) {
-          healthText = "Battery Consuming";
+          statusText = "Battery Consuming";
           summaryText = "Battery consumption detected";
         } else {
-          healthText = "Stable Consumption";
+          statusText = "Stable Consumption";
           summaryText = "No abnormal battery drain detected";
         }
 
-        document.getElementById("mStatus").innerText = healthText;
+        document.getElementById("mStatus").innerText = statusText;
         document.getElementById("mConfidence").innerText = "Trend-based";
-        document.getElementById("mHealth").innerText = latestData.end_percent+%;
+        document.getElementById("mHealth").innerText =
+          latestData.end_percent + "%";
 
         const summary = document.getElementById("summary");
         summary.className = "summary HEALTHY";
@@ -165,20 +164,31 @@ if (type === "wifi") {
 
       if (type === "wifi") {
         document.getElementById("mStatus").innerText =
-          latestData.connected ? `Connected (${latestData.ssid})` : "Not Connected";
-        document.getElementById("mConfidence").innerText = lastValue + "%";
+          latestData.connected
+            ? `Connected (${latestData.ssid})`
+            : "Not Connected";
+
+        document.getElementById("mConfidence").innerText =
+          lastValue + "%";
+
         document.getElementById("mHealth").innerText =
-          lastValue >= 60 ? "Good" : lastValue >= 30 ? "Moderate" : "Poor";
+          lastValue >= 60 ? "Good" :
+          lastValue >= 30 ? "Moderate" :
+          "Poor";
 
         const summary = document.getElementById("summary");
         summary.className = "summary " +
-          (lastValue >= 60 ? "HEALTHY" : lastValue >= 30 ? "DRIFTING" : "FAULTY");
+          (lastValue >= 60 ? "HEALTHY" :
+           lastValue >= 30 ? "DRIFTING" :
+           "FAULTY");
+
         summary.innerText =
           lastValue >= 60
             ? "WiFi signal is strong"
             : lastValue >= 30
             ? "WiFi signal is moderate"
             : "WiFi signal is weak";
+
         summary.classList.remove("hidden");
       }
     }
