@@ -68,6 +68,18 @@ async function fetchData(type) {
 /* ================= RUN ANALYSIS ================= */
 async function runAnalysis() {
   const type = document.getElementById("sensorType").value;
+  // ----- Update table labels based on sensor -----
+const confidenceCell = document.querySelector(
+  ".metrics tr:nth-child(3) td:first-child"
+);
+
+if (type === "battery") {
+  confidenceCell.innerText = "Battery Reliability";
+}
+
+if (type === "wifi") {
+  confidenceCell.innerText = "Signal Intensity";
+}
   if (!type) {
     alert("Please select a sensor");
     return;
