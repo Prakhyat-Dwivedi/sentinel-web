@@ -73,12 +73,21 @@ const confidenceCell = document.querySelector(
   ".metrics tr:nth-child(3) td:first-child"
 );
 
+const confidenceCell = document.querySelector(
+  ".metrics tr:nth-child(3) td:first-child"
+);
+const healthCell = document.querySelector(
+  ".metrics tr:nth-child(4) td:first-child"
+);
+
 if (type === "battery") {
   confidenceCell.innerText = "Battery Reliability";
+  healthCell.innerText = "Battery Percentage";
 }
 
 if (type === "wifi") {
   confidenceCell.innerText = "Signal Intensity";
+  healthCell.innerText = "Signal Quality";
 }
   if (!type) {
     alert("Please select a sensor");
