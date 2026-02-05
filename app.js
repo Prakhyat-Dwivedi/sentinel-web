@@ -83,11 +83,13 @@ async function runAnalysis() {
   );
 
   if (type === "battery") {
+    statusLabel.innerText="Battery Status";
     confidenceCell.innerText = "Battery Reliability";
     healthCell.innerText = "Battery Percentage";
   }
 
   if (type === "wifi") {
+    statusLabel.innerText="Connection Status";
     confidenceCell.innerText = "Signal Intensity";
     healthCell.innerText = "Signal Quality";
   }
