@@ -155,7 +155,7 @@ if (type === "wifi") {
 
         document.getElementById("mStatus").innerText = healthText;
         document.getElementById("mConfidence").innerText = "Trend-based";
-        document.getElementById("mHealth").innerText = healthText;
+        document.getElementById("mHealth").innerText = latestData.end_percent+%;
 
         const summary = document.getElementById("summary");
         summary.className = "summary HEALTHY";
