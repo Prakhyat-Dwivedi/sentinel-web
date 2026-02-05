@@ -1,117 +1,65 @@
-const API_BASE = "https://sensor-intelligence-api.onrender.com";
-const DURATION = 10;
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import time
 
-let chart;
-let timer;
-let timeLeft;
+app = FastAPI(title="Sentinel – Sensor Intelligence")
 
-/* ---------- INIT GRAPH ---------- */
-window.addEventListener("DOMContentLoaded", () => {
-  const ctx = document.getElementById("chart").getContext("2d");
-  chart = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: [],
-      datasets: [{
-        label: "Sensor Value (%)",
-        data: [],
-        borderColor: "#2563eb",
-        tension: 0.3
-      }]
-    },
-    options: {
-      responsive: true,
-      animation: false,
-      scales: {
-        x: { title: { display: true, text: "Time" }},
-        y: { min: 0, max: 100, title: { display: true, text: "Value (%)" }}
-      }
-    }
-  });
-});
+# Allow frontend / phone access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-/* ---------- RESET ---------- */
-function resetUI() {
-  document.getElementById("mStatus").innerText = "–";
-  document.getElementById("mConfidence").innerText = "–";
-  document.getElementById("mHealth").innerText = "–";
-  document.getElementById("summary").classList.add("hidden");
+# ==========================
+# IN-MEMORY STORE (PER DEVICE)
+# ==========================
+LATEST_DATA = {}   # device_id -> data
 
-  chart.data.labels = [];
-  chart.data.datasets[0].data = [];
-  chart.update();
-
-  clearInterval(timer);
-}
-
-/* ---------- FETCH ---------- */
-async function fetchData(type) {
-  const res = await fetch(`${API_BASE}/${type}`);
-  return res.json();
-}
-
-/* ---------- RUN ANALYSIS ---------- */
-async function runAnalysis() {
-  const type = document.getElementById("sensorType").value;
-  if (!type) return alert("Select a sensor");
-
-  resetUI();
-
-  const countdown = document.getElementById("countdown");
-  countdown.classList.remove("hidden");
-
-  timeLeft = DURATION;
-  let samples = [];
-  let statusText = "";
-
-  timer = setInterval(async () => {
-    countdown.innerText = `Analyzing… ${timeLeft}s`;
-
-    const data = await fetchData(type);
-    let value = 0;
-
-    if (type === "battery") {
-      value = data.percent;
-      statusText = data.charging ? "Charging" : "Discharging";
+# ==========================
+# ROOT (health check)
+# ==========================
+@app.get("/")
+def root():
+    return {
+        "project": "Sentinel – Sensor Intelligence",
+        "version": "1.0",
+        "status": "running"
     }
 
-    if (type === "wifi") {
-      value = data.signal_percent;
-      statusText = `Connected (${data.ssid})`;
+# ==========================
+# INGEST ENDPOINT
+# ==========================
+@app.post("/ingest")
+def ingest(data: dict):
+    device_id = data.get("device_id", "default")
+
+    LATEST_DATA[device_id] = {
+        "battery": data.get("battery"),
+        "wifi": data.get("wifi"),
+        "timestamp": time.time()
     }
 
-    samples.push(value);
-
-    chart.data.labels.push(new Date().toLocaleTimeString());
-    chart.data.datasets[0].data.push(value);
-    chart.update();
-
-    timeLeft--;
-
-    if (timeLeft === 0) {
-      clearInterval(timer);
-      countdown.classList.add("hidden");
-
-      const avg = Math.round(
-        samples.reduce((a, b) => a + b, 0) / samples.length
-      );
-
-      document.getElementById("mStatus").innerText = statusText;
-      document.getElementById("mConfidence").innerText = avg + "%";
-      document.getElementById("mHealth").innerText =
-        avg >= 70 ? "Healthy" : avg >= 40 ? "Warning" : "Critical";
-
-      const summary = document.getElementById("summary");
-      summary.classList.remove("hidden");
-      summary.className =
-        "summary " + (avg >= 70 ? "HEALTHY" : avg >= 40 ? "WARNING" : "CRITICAL");
-
-      summary.innerText =
-        avg >= 70
-          ? "System operating normally"
-          : avg >= 40
-          ? "Moderate degradation detected"
-          : "Poor condition detected";
+    return {
+        "status": "ingested",
+        "device_id": device_id
     }
-  }, 1000);
-}
+
+# ==========================
+# BATTERY API
+# ==========================
+@app.get("/battery")
+def battery(device_id: str = "default"):
+    if device_id not in LATEST_DATA:
+        return {"error": "Battery data not available"}
+    return LATEST_DATA[device_id]["battery"]
+
+# ==========================
+# WIFI API
+# ==========================
+@app.get("/wifi")
+def wifi(device_id: str = "default"):
+    if device_id not in LATEST_DATA:
+        return {"error": "WiFi data not available"}
+    return LATEST_DATA[device_id]["wifi"]
