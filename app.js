@@ -74,24 +74,28 @@ async function runAnalysis() {
     return;
   }
 
-  // ----- Update table labels based on sensor -----
-  const confidenceCell = document.querySelector(
+  /* ---- TABLE LABEL ELEMENTS (FIXED) ---- */
+  const statusLabel = document.querySelector(
+    ".metrics tr:nth-child(2) td:first-child"
+  );
+  const confidenceLabel = document.querySelector(
     ".metrics tr:nth-child(3) td:first-child"
   );
-  const healthCell = document.querySelector(
+  const healthLabel = document.querySelector(
     ".metrics tr:nth-child(4) td:first-child"
   );
 
+  /* ---- SET LABELS BASED ON SENSOR ---- */
   if (type === "battery") {
-    statusLabel.innerText="Battery Status";
-    confidenceCell.innerText = "Battery Reliability";
-    healthCell.innerText = "Battery Percentage";
+    statusLabel.innerText = "Battery Status";
+    confidenceLabel.innerText = "Battery Reliability";
+    healthLabel.innerText = "Battery Percentage";
   }
 
   if (type === "wifi") {
-    statusLabel.innerText="Connection Status";
-    confidenceCell.innerText = "Signal Intensity";
-    healthCell.innerText = "Signal Quality";
+    statusLabel.innerText = "Connection Status";
+    confidenceLabel.innerText = "Signal Intensity";
+    healthLabel.innerText = "Signal Quality";
   }
 
   resetUI();
