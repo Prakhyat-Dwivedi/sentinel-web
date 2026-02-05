@@ -1,96 +1,92 @@
-/* ================= CONFIG ================= */
 const API_BASE = "https://sensor-intelligence-api.onrender.com";
-const DURATION = 10; // seconds
+const DURATION = 10;
 
-let chart = null;
-let timer = null;
+let chart;
+let timer;
 
-/* ================= INIT GRAPH ================= */
-window.addEventListener("DOMContentLoaded", () => {
-  const canvas = document.getElementById("chart");
-  if (!canvas) return;
-
-  chart = new Chart(canvas.getContext("2d"), {
+/* ---------- INIT GRAPH ---------- */
+window.onload = () => {
+  const ctx = document.getElementById("chart").getContext("2d");
+  chart = new Chart(ctx, {
     type: "line",
     data: {
       labels: [],
       datasets: [{
-        label: "Battery Level (%)",
+        label: "Sensor Value (%)",
         data: [],
         borderColor: "#2563eb",
-        backgroundColor: "rgba(37,99,235,0.15)",
-        tension: 0.3,
-        fill: true
+        tension: 0.3
       }]
     },
     options: {
       responsive: true,
       animation: false,
       scales: {
-        x: { title: { display: true, text: "Time" } },
-        y: {
-          min: 0,
-          max: 100,
-          title: { display: true, text: "Battery %" }
-        }
+        y: { min: 0, max: 100 }
       }
     }
   });
-});
+};
 
-/* ================= RESET UI ================= */
+/* ---------- RESET ---------- */
 function resetUI() {
   document.getElementById("mStatus").innerText = "–";
   document.getElementById("mConfidence").innerText = "–";
   document.getElementById("mHealth").innerText = "–";
 
-  const summary = document.getElementById("summary");
-  summary.classList.add("hidden");
-  summary.innerText = "";
+  document.getElementById("summary").classList.add("hidden");
 
   chart.data.labels = [];
   chart.data.datasets[0].data = [];
   chart.update();
 }
 
-/* ================= FETCH ================= */
-async function fetchBattery() {
-  const res = await fetch(`${API_BASE}/battery`);
+/* ---------- FETCH ---------- */
+async function fetchData(endpoint) {
+  const res = await fetch(`${API_BASE}/${endpoint}`);
   const data = await res.json();
 
   if (data.error) throw new Error(data.error);
   return data;
 }
 
-/* ================= RUN ANALYSIS ================= */
+/* ---------- RUN ANALYSIS ---------- */
 async function runAnalysis() {
+  const type = document.getElementById("sensorType").value;
+  if (!type) {
+    alert("Please select a sensor");
+    return;
+  }
+
   resetUI();
 
   const countdown = document.getElementById("countdown");
   countdown.classList.remove("hidden");
 
   let timeLeft = DURATION;
-  let startPercent = null;
-  let endPercent = null;
-  let charging = false;
+  let lastValue = 0;
+  let statusText = "";
 
   clearInterval(timer);
 
   timer = setInterval(async () => {
-    countdown.innerText = `Observing battery… ${timeLeft}s`;
+    countdown.innerText = `Analyzing… ${timeLeft}s`;
 
     try {
-      const data = await fetchBattery();
+      const data = await fetchData(type);
 
-      if (startPercent === null) {
-        startPercent = data.percent;
+      if (type === "battery") {
+        lastValue = data.percent;
+        statusText = data.charging ? "Charging" : "Discharging";
       }
 
-      endPercent = data.percent;
-      charging = data.charging;
+      if (type === "wifi") {
+        lastValue = data.signal_percent;
+        statusText = `Connected (${data.ssid})`;
+      }
 
       chart.data.labels.push(new Date().toLocaleTimeString());
-      chart.data.datasets[0].data.push(endPercent);
+      chart.data.datasets[0].data.push(lastValue);
       chart.update();
 
     } catch (err) {
@@ -106,26 +102,20 @@ async function runAnalysis() {
       clearInterval(timer);
       countdown.classList.add("hidden");
 
-      const delta = endPercent - startPercent;
-
-      let statusText = charging
-        ? "Charging (Stable)"
-        : delta < 0
-        ? "Normal Discharge"
-        : "Stable Discharge";
-
-      // METRICS TABLE (UPDATED AFTER GRAPH)
       document.getElementById("mStatus").innerText = statusText;
-      document.getElementById("mConfidence").innerText = "Observed";
-      document.getElementById("mHealth").innerText = endPercent + "%";
+      document.getElementById("mConfidence").innerText = lastValue + "%";
+      document.getElementById("mHealth").innerText =
+        lastValue >= 70 ? "Healthy" :
+        lastValue >= 40 ? "Warning" : "Critical";
 
-      // SUMMARY
       const summary = document.getElementById("summary");
       summary.classList.remove("hidden");
-      summary.className = "summary HEALTHY";
-
       summary.innerText =
-        "Battery behavior is stable during short observation window.";
+        lastValue >= 70
+          ? "System operating normally"
+          : lastValue >= 40
+          ? "Moderate degradation detected"
+          : "Poor condition detected";
     }
   }, 1000);
 }
