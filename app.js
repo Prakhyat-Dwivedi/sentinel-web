@@ -92,7 +92,7 @@ async function runAnalysis() {
       const data = await fetchData(type);
 
       if (type === "battery") {
-        lastValue = data.percent;
+        lastValue = data.end_percent;
         statusText = data.charging ? "Charging" : "Discharging";
       }
 
