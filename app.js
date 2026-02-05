@@ -68,13 +68,12 @@ async function fetchData(type) {
 /* ================= RUN ANALYSIS ================= */
 async function runAnalysis() {
   const type = document.getElementById("sensorType").value;
-
   if (!type) {
     alert("Please select a sensor");
     return;
   }
 
-  /* ---- TABLE LABEL ELEMENTS (FIXED) ---- */
+  /* ===== METRIC LABEL CELLS ===== */
   const statusLabel = document.querySelector(
     ".metrics tr:nth-child(2) td:first-child"
   );
@@ -85,7 +84,6 @@ async function runAnalysis() {
     ".metrics tr:nth-child(4) td:first-child"
   );
 
-  /* ---- SET LABELS BASED ON SENSOR ---- */
   if (type === "battery") {
     statusLabel.innerText = "Battery Status";
     confidenceLabel.innerText = "Battery Reliability";
@@ -143,8 +141,8 @@ async function runAnalysis() {
 
       /* ===== FINAL METRICS ===== */
       if (type === "battery") {
-        let statusText = "";
-        let summaryText = "";
+        let statusText;
+        let summaryText;
 
         if (latestData.charging) {
           statusText = "Charging (Normal)";
@@ -183,7 +181,8 @@ async function runAnalysis() {
           "Poor";
 
         const summary = document.getElementById("summary");
-        summary.className = "summary " +
+        summary.className =
+          "summary " +
           (lastValue >= 60 ? "HEALTHY" :
            lastValue >= 30 ? "DRIFTING" :
            "FAULTY");
