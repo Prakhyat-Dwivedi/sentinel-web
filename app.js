@@ -61,7 +61,6 @@ function resetUI() {
 async function fetchData(type) {
   const res = await fetch(`${API_BASE}/${type}`);
   const data = await res.json();
-
   if (data.error) throw new Error(data.error);
   return data;
 }
@@ -81,7 +80,7 @@ async function runAnalysis() {
 
   let timeLeft = DURATION;
   let lastValue = 0;
-  let statusText = "";
+  let latestData = null;
 
   clearInterval(timer);
 
@@ -90,17 +89,14 @@ async function runAnalysis() {
 
     try {
       const data = await fetchData(type);
+      latestData = data;
 
       if (type === "battery") {
         lastValue = data.end_percent;
-        statusText = data.charging ? "Charging" : "Discharging";
       }
 
       if (type === "wifi") {
         lastValue = data.signal_percent;
-        statusText = data.connected
-          ? `Connected (${data.ssid})`
-          : "Not connected";
       }
 
       chart.data.labels.push(new Date().toLocaleTimeString());
@@ -120,25 +116,49 @@ async function runAnalysis() {
       clearInterval(timer);
       countdown.classList.add("hidden");
 
-      document.getElementById("mStatus").innerText = statusText;
-      document.getElementById("mConfidence").innerText = lastValue + "%";
-      document.getElementById("mHealth").innerText =
-        lastValue >= 70 ? "Healthy" :
-        lastValue >= 40 ? "Warning" :
-        "Critical";
+      /* ===== FINAL METRICS ===== */
+      if (type === "battery") {
+        let healthText = "";
+        let summaryText = "";
 
-      const summary = document.getElementById("summary");
-      summary.classList.remove("hidden");
+        if (latestData.charging) {
+          healthText = "Charging (Normal)";
+          summaryText = "Battery is charging normally";
+        } else if (latestData.delta < 0) {
+          healthText = "Battery Consuming";
+          summaryText = "Battery consumption detected";
+        } else {
+          healthText = "Stable Consumption";
+          summaryText = "No abnormal battery drain detected";
+        }
 
-      if (lastValue >= 70) {
+        document.getElementById("mStatus").innerText = healthText;
+        document.getElementById("mConfidence").innerText = "Trend-based";
+        document.getElementById("mHealth").innerText = healthText;
+
+        const summary = document.getElementById("summary");
         summary.className = "summary HEALTHY";
-        summary.innerText = "System operating normally";
-      } else if (lastValue >= 40) {
-        summary.className = "summary DRIFTING";
-        summary.innerText = "Moderate degradation detected";
-      } else {
-        summary.className = "summary FAULTY";
-        summary.innerText = "Poor condition detected";
+        summary.innerText = summaryText;
+        summary.classList.remove("hidden");
+      }
+
+      if (type === "wifi") {
+        document.getElementById("mStatus").innerText =
+          latestData.connected ? `Connected (${latestData.ssid})` : "Not Connected";
+        document.getElementById("mConfidence").innerText = lastValue + "%";
+        document.getElementById("mHealth").innerText =
+          lastValue >= 60 ? "Good" : lastValue >= 30 ? "Moderate" : "Poor";
+
+        const summary = document.getElementById("summary");
+        summary.className = "summary " +
+          (lastValue >= 60 ? "HEALTHY" : lastValue >= 30 ? "DRIFTING" : "FAULTY");
+        summary.innerText =
+          lastValue >= 60
+            ? "WiFi signal is strong"
+            : lastValue >= 30
+            ? "WiFi signal is moderate"
+            : "WiFi signal is weak";
+        summary.classList.remove("hidden");
       }
     }
   }, 1000);
