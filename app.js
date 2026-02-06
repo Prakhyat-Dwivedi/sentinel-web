@@ -11,7 +11,7 @@ function getDeviceId() {
   }
 
   // Browser → always fixed to your laptop
-  return "laptop";
+  return "Prakhyat";
 }
 
 const DEVICE_ID = getDeviceId();
