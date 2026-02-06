@@ -1,5 +1,7 @@
 /* ================= CONFIG ================= */
 const API_BASE = "https://sensor-intelligence-api.onrender.com";
+const DEVICE_ID =
+  /Android/i.test(navigator.userAgent) ? "android" : "laptop";
 const DURATION = 10; // seconds
 
 let chart = null;
@@ -63,9 +65,11 @@ function resetUI() {
   }
 }
 
-/* ================= FETCH ================= */
+/* ================= FETCH (UPDATED FOR MULTI DEVICE) ================= */
 async function fetchData(type) {
-  const res = await fetch(`${API_BASE}/${type}`);
+  const res = await fetch(
+    `${API_BASE}/${type}?device_id=${DEVICE_ID}`
+  );
   const data = await res.json();
   if (data.error) throw new Error(data.error);
   return data;
@@ -118,7 +122,9 @@ async function runAnalysis() {
       }
 
       if (type === "wifi") {
-        lastValue = latestData.connected ? latestData.signal_percent : 0;
+        lastValue = latestData.connected
+          ? latestData.signal_percent
+          : 0;
       }
 
       chart.data.labels.push(new Date().toLocaleTimeString());
@@ -155,7 +161,8 @@ async function runAnalysis() {
 
         document.getElementById("mStatus").innerText = statusText;
         document.getElementById("mConfidence").innerText = "Trend-based";
-        document.getElementById("mHealth").innerText = latestData.end_percent + "%";
+        document.getElementById("mHealth").innerText =
+          latestData.end_percent + "%";
 
         const summary = document.getElementById("summary");
         summary.className = "summary HEALTHY";
@@ -163,7 +170,7 @@ async function runAnalysis() {
         summary.classList.remove("hidden");
       }
 
-      /* ===== WIFI FINAL (FIXED) ===== */
+      /* ===== WIFI FINAL ===== */
       if (type === "wifi") {
 
         if (!latestData.connected) {
