@@ -2,11 +2,18 @@
 const API_BASE = "https://sensor-intelligence-api.onrender.com";
 const DURATION = 10; // seconds
 
-/* ===== UNIQUE DEVICE ID (WORKS FOR WEB + APK) ===== */
+/* ===== UNIQUE DEVICE ID (APK + WEB) ===== */
 function getDeviceId() {
+
+  // If running inside Android APK (WebView)
+  if (window.Android && typeof Android.getDeviceId === "function") {
+    return Android.getDeviceId();
+  }
+
+  // Browser / Laptop
   let id = localStorage.getItem("sentinel_device_id");
   if (!id) {
-    id = "device-" + Math.random().toString(36).substring(2, 10);
+    id = "web-" + Math.random().toString(36).substring(2, 10);
     localStorage.setItem("sentinel_device_id", id);
   }
   return id;
@@ -75,7 +82,7 @@ function resetUI() {
   }
 }
 
-/* ================= FETCH (MULTI DEVICE) ================= */
+/* ================= FETCH ================= */
 async function fetchData(type) {
   const res = await fetch(
     `${API_BASE}/${type}?device_id=${DEVICE_ID}`
