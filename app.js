@@ -1,8 +1,18 @@
 /* ================= CONFIG ================= */
 const API_BASE = "https://sensor-intelligence-api.onrender.com";
-const DEVICE_ID =
-  /Android/i.test(navigator.userAgent) ? "android" : "laptop";
 const DURATION = 10; // seconds
+
+/* ===== UNIQUE DEVICE ID (WORKS FOR WEB + APK) ===== */
+function getDeviceId() {
+  let id = localStorage.getItem("sentinel_device_id");
+  if (!id) {
+    id = "device-" + Math.random().toString(36).substring(2, 10);
+    localStorage.setItem("sentinel_device_id", id);
+  }
+  return id;
+}
+
+const DEVICE_ID = getDeviceId();
 
 let chart = null;
 let timer = null;
@@ -65,7 +75,7 @@ function resetUI() {
   }
 }
 
-/* ================= FETCH (UPDATED FOR MULTI DEVICE) ================= */
+/* ================= FETCH (MULTI DEVICE) ================= */
 async function fetchData(type) {
   const res = await fetch(
     `${API_BASE}/${type}?device_id=${DEVICE_ID}`
@@ -83,7 +93,7 @@ async function runAnalysis() {
     return;
   }
 
-  /* ===== METRIC LABELS ===== */
+  /* ===== LABELS ===== */
   const statusLabel = document.querySelector(".metrics tr:nth-child(2) td:first-child");
   const confidenceLabel = document.querySelector(".metrics tr:nth-child(3) td:first-child");
   const healthLabel = document.querySelector(".metrics tr:nth-child(4) td:first-child");
@@ -144,7 +154,7 @@ async function runAnalysis() {
       clearInterval(timer);
       countdown.classList.add("hidden");
 
-      /* ===== BATTERY FINAL ===== */
+      /* ===== BATTERY ===== */
       if (type === "battery") {
         let statusText, summaryText;
 
@@ -170,7 +180,7 @@ async function runAnalysis() {
         summary.classList.remove("hidden");
       }
 
-      /* ===== WIFI FINAL ===== */
+      /* ===== WIFI ===== */
       if (type === "wifi") {
 
         if (!latestData.connected) {
