@@ -25,26 +25,22 @@ window.addEventListener("DOMContentLoaded", () => {
         fill: true
       }]
     },
-   options: {
-  responsive: true,
-  maintainAspectRatio: false,
-  resizeDelay: 0,
-  animation: false,
-  scales: {
-    x: {
-      title: { display: true, text: "Time" },
-      ticks: {
-        autoSkip: true,
-        maxTicksLimit: 4
-      },
-      grid: { display: false }
-    },
-    y: {
-      min: 0,
-      max: 100,
-      ticks: { stepSize: 20 },
-      title: { display: true, text: "Value (%)" }
-    }
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      scales: {
+        x: {
+          title: { display: true, text: "Time" },
+          ticks: { autoSkip: true, maxTicksLimit: 4 },
+          grid: { display: false }
+        },
+        y: {
+          min: 0,
+          max: 100,
+          ticks: { stepSize: 20 },
+          title: { display: true, text: "Value (%)" }
+        }
       }
     }
   });
@@ -83,16 +79,10 @@ async function runAnalysis() {
     return;
   }
 
-  /* ===== METRIC LABEL CELLS ===== */
-  const statusLabel = document.querySelector(
-    ".metrics tr:nth-child(2) td:first-child"
-  );
-  const confidenceLabel = document.querySelector(
-    ".metrics tr:nth-child(3) td:first-child"
-  );
-  const healthLabel = document.querySelector(
-    ".metrics tr:nth-child(4) td:first-child"
-  );
+  /* ===== METRIC LABELS ===== */
+  const statusLabel = document.querySelector(".metrics tr:nth-child(2) td:first-child");
+  const confidenceLabel = document.querySelector(".metrics tr:nth-child(3) td:first-child");
+  const healthLabel = document.querySelector(".metrics tr:nth-child(4) td:first-child");
 
   if (type === "battery") {
     statusLabel.innerText = "Battery Status";
@@ -121,15 +111,14 @@ async function runAnalysis() {
     countdown.innerText = `Analyzing… ${timeLeft}s`;
 
     try {
-      const data = await fetchData(type);
-      latestData = data;
+      latestData = await fetchData(type);
 
       if (type === "battery") {
-        lastValue = data.end_percent;
+        lastValue = latestData.end_percent;
       }
 
       if (type === "wifi") {
-        lastValue = data.signal_percent;
+        lastValue = latestData.connected ? latestData.signal_percent : 0;
       }
 
       chart.data.labels.push(new Date().toLocaleTimeString());
@@ -149,10 +138,9 @@ async function runAnalysis() {
       clearInterval(timer);
       countdown.classList.add("hidden");
 
-      /* ===== FINAL METRICS ===== */
+      /* ===== BATTERY FINAL ===== */
       if (type === "battery") {
-        let statusText;
-        let summaryText;
+        let statusText, summaryText;
 
         if (latestData.charging) {
           statusText = "Charging (Normal)";
@@ -167,8 +155,7 @@ async function runAnalysis() {
 
         document.getElementById("mStatus").innerText = statusText;
         document.getElementById("mConfidence").innerText = "Trend-based";
-        document.getElementById("mHealth").innerText =
-          latestData.end_percent + "%";
+        document.getElementById("mHealth").innerText = latestData.end_percent + "%";
 
         const summary = document.getElementById("summary");
         summary.className = "summary HEALTHY";
@@ -176,33 +163,45 @@ async function runAnalysis() {
         summary.classList.remove("hidden");
       }
 
+      /* ===== WIFI FINAL (FIXED) ===== */
       if (type === "wifi") {
+
+        if (!latestData.connected) {
+          document.getElementById("mStatus").innerText = "Not Connected";
+          document.getElementById("mConfidence").innerText = "–";
+          document.getElementById("mHealth").innerText = "–";
+
+          const summary = document.getElementById("summary");
+          summary.className = "summary FAULTY";
+          summary.innerText = "Wi-Fi is not connected";
+          summary.classList.remove("hidden");
+          return;
+        }
+
         document.getElementById("mStatus").innerText =
-          latestData.connected
-            ? `Connected (${latestData.ssid})`
-            : "Not Connected";
+          `Connected (${latestData.ssid})`;
 
         document.getElementById("mConfidence").innerText =
-          lastValue + "%";
+          latestData.signal_percent + "%";
 
         document.getElementById("mHealth").innerText =
-          lastValue >= 60 ? "Good" :
-          lastValue >= 30 ? "Moderate" :
+          latestData.signal_percent >= 60 ? "Good" :
+          latestData.signal_percent >= 30 ? "Moderate" :
           "Poor";
 
         const summary = document.getElementById("summary");
         summary.className =
           "summary " +
-          (lastValue >= 60 ? "HEALTHY" :
-           lastValue >= 30 ? "DRIFTING" :
+          (latestData.signal_percent >= 60 ? "HEALTHY" :
+           latestData.signal_percent >= 30 ? "DRIFTING" :
            "FAULTY");
 
         summary.innerText =
-          lastValue >= 60
-            ? "WiFi signal is strong"
-            : lastValue >= 30
-            ? "WiFi signal is moderate"
-            : "WiFi signal is weak";
+          latestData.signal_percent >= 60
+            ? "Wi-Fi signal is strong"
+            : latestData.signal_percent >= 30
+            ? "Wi-Fi signal is moderate"
+            : "Wi-Fi signal is weak";
 
         summary.classList.remove("hidden");
       }
