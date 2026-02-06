@@ -1,16 +1,22 @@
 /* ================= CONFIG ================= */
-const API_BASE = "https://sensor-intelligence-api.onrender.com";
+
+/* ===== AUTO: LOCAL FOR YOUR LAPTOP, CLOUD FOR OTHERS ===== */
+const API_BASE =
+  location.hostname === "localhost" || location.hostname === "127.0.0.1"
+    ? "http://127.0.0.1:8000"
+    : "https://sensor-intelligence-api.onrender.com";
+
 const DURATION = 10; // seconds
 
 /* ===== UNIQUE DEVICE ID (APK + WEB) ===== */
 function getDeviceId() {
 
-  // If running inside Android APK (WebView)
+  // Android APK (WebView)
   if (window.Android && typeof Android.getDeviceId === "function") {
     return Android.getDeviceId();
   }
 
-  // Browser / Laptop
+  // Laptop / Browser
   let id = localStorage.getItem("sentinel_device_id");
   if (!id) {
     id = "web-" + Math.random().toString(36).substring(2, 10);
@@ -87,8 +93,11 @@ async function fetchData(type) {
   const res = await fetch(
     `${API_BASE}/${type}?device_id=${DEVICE_ID}`
   );
+
   const data = await res.json();
+
   if (data.error) throw new Error(data.error);
+
   return data;
 }
 
@@ -135,7 +144,7 @@ async function runAnalysis() {
       latestData = await fetchData(type);
 
       if (type === "battery") {
-        lastValue = latestData.end_percent;
+        lastValue = latestData.end_percent || 0;
       }
 
       if (type === "wifi") {
