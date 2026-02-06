@@ -88,3 +88,27 @@ canvas {
   background: #fee2e2;
   color: #991b1b;
 }
+/* ===== MOBILE SPACING FIX ===== */
+@media (max-width: 600px) {
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;              /* 👈 KEY FIX */
+    margin-bottom: 20px;
+  }
+
+  .controls select {
+    width: 100%;
+    max-width: 320px;
+    height: 46px;
+  }
+
+  .controls button {
+    width: 70%;
+    max-width: 240px;
+    height: 46px;
+    margin-top: 6px;        /* 👈 EXTRA SAFETY */
+  }
+}
