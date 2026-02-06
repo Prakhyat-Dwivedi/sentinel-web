@@ -4,13 +4,25 @@
   <meta charset="UTF-8" />
   <title>Sentinel – Sensor Intelligence</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Styles -->
   <link rel="stylesheet" href="style.css" />
+
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
+
+<!-- ================= HEADER ================= -->
+<header class="app-header">
+  <img src="logo.png" alt="Sentinel Logo" class="app-logo">
+  <h1>Sentinel</h1>
+</header>
 
 <h2>📊 Sentinel – Sensor Intelligence</h2>
 
+<!-- ================= CONTROLS ================= -->
 <div class="controls">
   <select id="sensorType">
     <option value="">Select Sensor</option>
@@ -20,38 +32,42 @@
   <button onclick="runAnalysis()">Run Analysis</button>
 </div>
 
+<!-- ================= COUNTDOWN ================= -->
 <div id="countdown" class="countdown hidden"></div>
 
+<!-- ================= DASHBOARD ================= -->
 <div class="dashboard">
 
   <!-- GRAPH -->
   <canvas id="chart"></canvas>
 
   <!-- METRICS TABLE -->
- <table class="metrics">
-  <tr>
-    <th>Metric</th>
-    <th>Value</th>
-  </tr>
-  <tr>
-    <td id="lStatus">–</td>
-    <td id="mStatus">–</td>
-  </tr>
-  <tr>
-    <td id="lConfidence">–</td>
-    <td id="mConfidence">–</td>
-  </tr>
-  <tr>
-    <td id="lHealth">–</td>
-    <td id="mHealth">–</td>
-  </tr>
-</table>
+  <table class="metrics">
+    <tr>
+      <th>Metric</th>
+      <th>Value</th>
+    </tr>
+    <tr>
+      <td id="lStatus">–</td>
+      <td id="mStatus">–</td>
+    </tr>
+    <tr>
+      <td id="lConfidence">–</td>
+      <td id="mConfidence">–</td>
+    </tr>
+    <tr>
+      <td id="lHealth">–</td>
+      <td id="mHealth">–</td>
+    </tr>
+  </table>
+
 </div>
 
-<!-- SUMMARY -->
+<!-- ================= SUMMARY ================= -->
 <div id="summary" class="summary hidden"></div>
 
-  <script src="./app.js"></script>
+<!-- ================= SCRIPT ================= -->
+<script src="./app.js"></script>
 
 </body>
 </html>
