@@ -1,28 +1,17 @@
 /* ================= CONFIG ================= */
-
-/* ===== AUTO: LOCAL FOR YOUR LAPTOP, CLOUD FOR OTHERS ===== */
-const API_BASE =
-  location.hostname === "localhost" || location.hostname === "127.0.0.1"
-    ? "http://127.0.0.1:8000"
-    : "https://sensor-intelligence-api.onrender.com";
-
+const API_BASE = "https://sensor-intelligence-api.onrender.com";
 const DURATION = 10; // seconds
 
-/* ===== UNIQUE DEVICE ID (APK + WEB) ===== */
+/* ===== DEVICE ID LOGIC ===== */
 function getDeviceId() {
 
-  // Android APK (WebView)
+  // If running inside Android APK (WebView)
   if (window.Android && typeof Android.getDeviceId === "function") {
-    return Android.getDeviceId();
+    return Android.getDeviceId();   // unique per phone
   }
 
-  // Laptop / Browser
-  let id = localStorage.getItem("sentinel_device_id");
-  if (!id) {
-    id = "web-" + Math.random().toString(36).substring(2, 10);
-    localStorage.setItem("sentinel_device_id", id);
-  }
-  return id;
+  // Browser → always fixed to your laptop
+  return "laptop";
 }
 
 const DEVICE_ID = getDeviceId();
@@ -97,7 +86,6 @@ async function fetchData(type) {
   const data = await res.json();
 
   if (data.error) throw new Error(data.error);
-
   return data;
 }
 
@@ -144,7 +132,7 @@ async function runAnalysis() {
       latestData = await fetchData(type);
 
       if (type === "battery") {
-        lastValue = latestData.end_percent || 0;
+        lastValue = latestData.end_percent;
       }
 
       if (type === "wifi") {
@@ -170,7 +158,7 @@ async function runAnalysis() {
       clearInterval(timer);
       countdown.classList.add("hidden");
 
-      /* ===== BATTERY ===== */
+      /* ===== BATTERY RESULT ===== */
       if (type === "battery") {
         let statusText, summaryText;
 
@@ -196,7 +184,7 @@ async function runAnalysis() {
         summary.classList.remove("hidden");
       }
 
-      /* ===== WIFI ===== */
+      /* ===== WIFI RESULT ===== */
       if (type === "wifi") {
 
         if (!latestData.connected) {
