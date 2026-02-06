@@ -25,16 +25,26 @@ window.addEventListener("DOMContentLoaded", () => {
         fill: true
       }]
     },
-    options: {
-      responsive: true,
-      animation: false,
-      scales: {
-        x: { title: { display: true, text: "Time" } },
-        y: {
-          min: 0,
-          max: 100,
-          title: { display: true, text: "Value (%)" }
-        }
+   options: {
+  responsive: true,
+  maintainAspectRatio: false,
+  resizeDelay: 0,
+  animation: false,
+  scales: {
+    x: {
+      title: { display: true, text: "Time" },
+      ticks: {
+        autoSkip: true,
+        maxTicksLimit: 4
+      },
+      grid: { display: false }
+    },
+    y: {
+      min: 0,
+      max: 100,
+      ticks: { stepSize: 20 },
+      title: { display: true, text: "Value (%)" }
+    }
       }
     }
   });
