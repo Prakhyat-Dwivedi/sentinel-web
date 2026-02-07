@@ -230,31 +230,20 @@ async function runAnalysis() {
       /* ===== MOBILE RESULT ===== */
 if (type === "mobile") {
 
-  if (!latestData.connected) {
-    document.getElementById("mStatus").innerText = "No Mobile Data";
-    document.getElementById("mConfidence").innerText = "0 KB/s";
-    document.getElementById("mHealth").innerText = "Inactive";
+  if (!latestData.connected || latestData.speed_kbps === 0) {
+    document.getElementById("mStatus").innerText = "Not Active";
+    document.getElementById("mConfidence").innerText = latestData.message || "No mobile data";
+    document.getElementById("mHealth").innerText = "–";
 
     const summary = document.getElementById("summary");
     summary.className = "summary FAULTY";
-    summary.innerText = "Mobile data is not active";
-    summary.classList.remove("hidden");
-    return;
-  }
-
-  if (latestData.speed_kbps === 0) {
-    document.getElementById("mStatus").innerText = "Connected";
-    document.getElementById("mConfidence").innerText = "Testing...";
-    document.getElementById("mHealth").innerText = "Slow";
-
-    const summary = document.getElementById("summary");
-    summary.className = "summary DRIFTING";
-    summary.innerText = "Network active but speed is very low or unstable";
+    summary.innerText = latestData.message || "Mobile data is OFF or WiFi is active";
     summary.classList.remove("hidden");
     return;
   }
 
   document.getElementById("mStatus").innerText = "Active";
+
   document.getElementById("mConfidence").innerText =
     latestData.speed_kbps + " KB/s";
 
