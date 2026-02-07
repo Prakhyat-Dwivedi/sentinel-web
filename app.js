@@ -4,13 +4,12 @@ const DURATION = 10; // seconds
 
 /* ===== DEVICE ID LOGIC ===== */
 function getDeviceId() {
-
-  // If running inside Android APK (WebView)
+  // APK (Android WebView)
   if (window.Android && typeof Android.getDeviceId === "function") {
-    return Android.getDeviceId();   // unique per phone
+    return Android.getDeviceId();
   }
 
-  // Browser → always fixed to your laptop
+  // Browser → fixed to your laptop agent
   return "Prakhyat";
 }
 
@@ -31,7 +30,7 @@ window.addEventListener("DOMContentLoaded", () => {
     data: {
       labels: [],
       datasets: [{
-        label: "Sensor Value (%)",
+        label: "Sensor Value",
         data: [],
         borderColor: "#2563eb",
         backgroundColor: "rgba(37,99,235,0.1)",
@@ -53,7 +52,7 @@ window.addEventListener("DOMContentLoaded", () => {
           min: 0,
           max: 100,
           ticks: { stepSize: 20 },
-          title: { display: true, text: "Value (%)" }
+          title: { display: true, text: "Value" }
         }
       }
     }
@@ -79,10 +78,7 @@ function resetUI() {
 
 /* ================= FETCH ================= */
 async function fetchData(type) {
-  const res = await fetch(
-    `${API_BASE}/${type}?device_id=${DEVICE_ID}`
-  );
-
+  const res = await fetch(`${API_BASE}/${type}?device_id=${DEVICE_ID}`);
   const data = await res.json();
 
   if (data.error) throw new Error(data.error);
@@ -115,10 +111,10 @@ async function runAnalysis() {
   }
 
   if (type === "mobile") {
-  statusLabel.innerText = "Network Status";
-  confidenceLabel.innerText = "Speed (KB/s)";
-  healthLabel.innerText = "Quality";
-}
+    statusLabel.innerText = "Network Status";
+    confidenceLabel.innerText = "Speed (KB/s)";
+    healthLabel.innerText = "Quality";
+  }
 
   resetUI();
 
@@ -137,8 +133,9 @@ async function runAnalysis() {
     try {
       latestData = await fetchData(type);
 
+      /* ===== GRAPH VALUES ===== */
       if (type === "battery") {
-        lastValue = latestData.end_percent;
+        lastValue = latestData.end_percent || 0;
       }
 
       if (type === "wifi") {
@@ -148,8 +145,8 @@ async function runAnalysis() {
       }
 
       if (type === "mobile") {
-  lastValue = latestData.speed_kbps;
-}
+        lastValue = latestData.speed_kbps || 0;
+      }
 
       chart.data.labels.push(new Date().toLocaleTimeString());
       chart.data.datasets[0].data.push(lastValue);
@@ -170,17 +167,14 @@ async function runAnalysis() {
 
       /* ===== BATTERY RESULT ===== */
       if (type === "battery") {
-        let statusText, summaryText;
+        let statusText;
 
         if (latestData.charging) {
           statusText = "Charging (Normal)";
-          summaryText = "Battery is charging normally";
         } else if (latestData.delta < 0) {
           statusText = "Battery Consuming";
-          summaryText = "Battery consumption detected";
         } else {
           statusText = "Stable Consumption";
-          summaryText = "No abnormal battery drain detected";
         }
 
         document.getElementById("mStatus").innerText = statusText;
@@ -190,7 +184,7 @@ async function runAnalysis() {
 
         const summary = document.getElementById("summary");
         summary.className = "summary HEALTHY";
-        summary.innerText = summaryText;
+        summary.innerText = "Battery analysis completed";
         summary.classList.remove("hidden");
       }
 
@@ -222,50 +216,48 @@ async function runAnalysis() {
 
         const summary = document.getElementById("summary");
         summary.className =
-          "summary " +
-          (latestData.signal_percent >= 60 ? "HEALTHY" :
-           latestData.signal_percent >= 30 ? "DRIFTING" :
-           "FAULTY");
+          latestData.signal_percent >= 60 ? "summary HEALTHY" :
+          latestData.signal_percent >= 30 ? "summary DRIFTING" :
+          "summary FAULTY";
 
-        summary.innerText =
-          latestData.signal_percent >= 60
-            ? "Wi-Fi signal is strong"
-            : latestData.signal_percent >= 30
-            ? "Wi-Fi signal is moderate"
-            : "Wi-Fi signal is weak";
-
+        summary.innerText = "Wi-Fi analysis completed";
         summary.classList.remove("hidden");
       }
 
       /* ===== MOBILE RESULT ===== */
-if (type === "mobile") {
+      if (type === "mobile") {
 
-  document.getElementById("mStatus").innerText = "Active";
+        if (!latestData || latestData.speed_kbps === undefined) {
+          document.getElementById("mStatus").innerText = "No Data";
+          document.getElementById("mConfidence").innerText = "–";
+          document.getElementById("mHealth").innerText = "–";
 
-  document.getElementById("mConfidence").innerText =
-    latestData.speed_kbps + " KB/s";
+          const summary = document.getElementById("summary");
+          summary.className = "summary FAULTY";
+          summary.innerText = "Mobile speed data not available";
+          summary.classList.remove("hidden");
+          return;
+        }
 
-  document.getElementById("mHealth").innerText =
-    latestData.speed_kbps >= 500 ? "Good" :
-    latestData.speed_kbps >= 150 ? "Moderate" :
-    "Slow";
+        const speed = latestData.speed_kbps;
 
-  const summary = document.getElementById("summary");
-  summary.className =
-    "summary " +
-    (latestData.speed_kbps >= 500 ? "HEALTHY" :
-     latestData.speed_kbps >= 150 ? "DRIFTING" :
-     "FAULTY");
+        document.getElementById("mStatus").innerText = "Active";
+        document.getElementById("mConfidence").innerText = speed + " KB/s";
 
-  summary.innerText =
-    latestData.speed_kbps >= 500
-      ? "Internet speed is good"
-      : latestData.speed_kbps >= 150
-      ? "Internet speed is moderate"
-      : "Internet speed is slow";
+        document.getElementById("mHealth").innerText =
+          speed >= 500 ? "Good" :
+          speed >= 150 ? "Moderate" :
+          "Slow";
 
-  summary.classList.remove("hidden");
-}
+        const summary = document.getElementById("summary");
+        summary.className =
+          speed >= 500 ? "summary HEALTHY" :
+          speed >= 150 ? "summary DRIFTING" :
+          "summary FAULTY";
+
+        summary.innerText = "Internet speed analysis completed";
+        summary.classList.remove("hidden");
+      }
     }
   }, 1000);
 }
