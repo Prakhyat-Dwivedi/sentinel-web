@@ -148,7 +148,7 @@ async function runAnalysis() {
         if(!latestData.speed_kbps){
           throw new Error("Phone data not available.Open Setinel app on phone");
         }
-        lastValue =Nath.min( latestData.speed_kbps/0,100);
+        lastValue =Nath.min( latestData.speed_kbps/10,100);
       }
 
       chart.data.labels.push(new Date().toLocaleTimeString());
