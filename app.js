@@ -228,39 +228,57 @@ async function runAnalysis() {
       }
 
       /* ===== MOBILE RESULT ===== */
-      if (type === "mobile") {
+if (type === "mobile") {
 
-        if (!latestData || latestData.speed_kbps === undefined) {
-          document.getElementById("mStatus").innerText = "No Data";
-          document.getElementById("mConfidence").innerText = "–";
-          document.getElementById("mHealth").innerText = "–";
+  if (!latestData.connected) {
+    document.getElementById("mStatus").innerText = "No Mobile Data";
+    document.getElementById("mConfidence").innerText = "0 KB/s";
+    document.getElementById("mHealth").innerText = "Inactive";
 
-          const summary = document.getElementById("summary");
-          summary.className = "summary FAULTY";
-          summary.innerText = "Mobile speed data not available";
-          summary.classList.remove("hidden");
-          return;
-        }
+    const summary = document.getElementById("summary");
+    summary.className = "summary FAULTY";
+    summary.innerText = "Mobile data is not active";
+    summary.classList.remove("hidden");
+    return;
+  }
 
-        const speed = latestData.speed_kbps;
+  if (latestData.speed_kbps === 0) {
+    document.getElementById("mStatus").innerText = "Connected";
+    document.getElementById("mConfidence").innerText = "Testing...";
+    document.getElementById("mHealth").innerText = "Slow";
 
-        document.getElementById("mStatus").innerText = "Active";
-        document.getElementById("mConfidence").innerText = speed + " KB/s";
+    const summary = document.getElementById("summary");
+    summary.className = "summary DRIFTING";
+    summary.innerText = "Network active but speed is very low or unstable";
+    summary.classList.remove("hidden");
+    return;
+  }
 
-        document.getElementById("mHealth").innerText =
-          speed >= 500 ? "Good" :
-          speed >= 150 ? "Moderate" :
-          "Slow";
+  document.getElementById("mStatus").innerText = "Active";
+  document.getElementById("mConfidence").innerText =
+    latestData.speed_kbps + " KB/s";
 
-        const summary = document.getElementById("summary");
-        summary.className =
-          speed >= 500 ? "summary HEALTHY" :
-          speed >= 150 ? "summary DRIFTING" :
-          "summary FAULTY";
+  document.getElementById("mHealth").innerText =
+    latestData.speed_kbps >= 500 ? "Good" :
+    latestData.speed_kbps >= 150 ? "Moderate" :
+    "Slow";
 
-        summary.innerText = "Internet speed analysis completed";
-        summary.classList.remove("hidden");
-      }
+  const summary = document.getElementById("summary");
+  summary.className =
+    "summary " +
+    (latestData.speed_kbps >= 500 ? "HEALTHY" :
+     latestData.speed_kbps >= 150 ? "DRIFTING" :
+     "FAULTY");
+
+  summary.innerText =
+    latestData.speed_kbps >= 500
+      ? "Internet speed is good"
+      : latestData.speed_kbps >= 150
+      ? "Internet speed is moderate"
+      : "Internet speed is slow";
+
+  summary.classList.remove("hidden");
+}
     }
   }, 1000);
 }
