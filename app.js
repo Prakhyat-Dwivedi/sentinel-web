@@ -145,6 +145,9 @@ async function runAnalysis() {
       }
 
       if (type === "mobile") {
+        if(!latestData.speed_kbps){
+          throw new Error("Phone data not available.Open Setinel app on phone");
+        }
         lastValue = latestData.speed_kbps || 0;
       }
 
