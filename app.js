@@ -114,6 +114,12 @@ async function runAnalysis() {
     healthLabel.innerText = "Signal Quality";
   }
 
+  if (type === "mobile") {
+  statusLabel.innerText = "Network Status";
+  confidenceLabel.innerText = "Speed (KB/s)";
+  healthLabel.innerText = "Quality";
+}
+
   resetUI();
 
   const countdown = document.getElementById("countdown");
@@ -140,6 +146,10 @@ async function runAnalysis() {
           ? latestData.signal_percent
           : 0;
       }
+
+      if (type === "mobile") {
+  lastValue = latestData.speed_kbps;
+}
 
       chart.data.labels.push(new Date().toLocaleTimeString());
       chart.data.datasets[0].data.push(lastValue);
@@ -226,6 +236,36 @@ async function runAnalysis() {
 
         summary.classList.remove("hidden");
       }
+
+      /* ===== MOBILE RESULT ===== */
+if (type === "mobile") {
+
+  document.getElementById("mStatus").innerText = "Active";
+
+  document.getElementById("mConfidence").innerText =
+    latestData.speed_kbps + " KB/s";
+
+  document.getElementById("mHealth").innerText =
+    latestData.speed_kbps >= 500 ? "Good" :
+    latestData.speed_kbps >= 150 ? "Moderate" :
+    "Slow";
+
+  const summary = document.getElementById("summary");
+  summary.className =
+    "summary " +
+    (latestData.speed_kbps >= 500 ? "HEALTHY" :
+     latestData.speed_kbps >= 150 ? "DRIFTING" :
+     "FAULTY");
+
+  summary.innerText =
+    latestData.speed_kbps >= 500
+      ? "Internet speed is good"
+      : latestData.speed_kbps >= 150
+      ? "Internet speed is moderate"
+      : "Internet speed is slow";
+
+  summary.classList.remove("hidden");
+}
     }
   }, 1000);
 }
