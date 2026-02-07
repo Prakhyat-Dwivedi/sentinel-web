@@ -49,9 +49,7 @@ window.addEventListener("DOMContentLoaded", () => {
           grid: { display: false }
         },
         y: {
-          min: 0,
-          max: 100,
-          ticks: { stepSize: 20 },
+          beginAtZero:true,
           title: { display: true, text: "Value" }
         }
       }
