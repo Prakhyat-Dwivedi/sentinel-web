@@ -1,63 +1,98 @@
 /* ================= CONFIG ================= */
 const API_BASE = "https://sensor-intelligence-api.onrender.com";
-const DURATION = 10; // seconds
+const DURATION = 10;
 
-/* ===== DEVICE ID LOGIC ===== */
+/* ===== DEVICE ID ===== */
 function getDeviceId() {
-  // APK (Android WebView)
   if (window.Android && typeof Android.getDeviceId === "function") {
     return Android.getDeviceId();
   }
-
-  // Browser fallback
   return "Prakhyat";
 }
 
 const DEVICE_ID = getDeviceId();
 
 let chart = null;
+let gauge = null;
 let timer = null;
 
-/* ================= INIT GRAPH ================= */
+/* ================= INIT ================= */
 window.addEventListener("DOMContentLoaded", () => {
-  const canvas = document.getElementById("chart");
-  if (!canvas) return;
 
-  const ctx = canvas.getContext("2d");
+  /* ----- Battery Graph ----- */
+  const ctx = document.getElementById("chart")?.getContext("2d");
 
-  chart = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: [],
-      datasets: [{
-        label: "Sensor Value",
-        data: [],
-        borderColor: "#2563eb",
-        backgroundColor: "rgba(37,99,235,0.1)",
-        tension: 0.3,
-        fill: true
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      scales: {
-        x: {
-          title: { display: true, text: "Time" },
-          ticks: { autoSkip: true, maxTicksLimit: 4 },
-          grid: { display: false }
-        },
-        y: {
-          beginAtZero: true,
-          title: { display: true, text: "Value" }
+  if (ctx) {
+    chart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [{
+          label: "Battery %",
+          data: [],
+          borderColor: "#2563eb",
+          backgroundColor: "rgba(37,99,235,0.1)",
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      options: {
+        animation: false,
+        scales: {
+          y: {
+            min: 0,
+            max: 100
+          }
         }
       }
-    }
-  });
+    });
+  }
+
+  /* ----- Speedometer Gauge ----- */
+  const gctx = document.getElementById("speedGauge")?.getContext("2d");
+
+  if (gctx) {
+    gauge = new Chart(gctx, {
+      type: "doughnut",
+      data: {
+        datasets: [{
+          data: [0, 100],
+          backgroundColor: ["#2563eb", "#e5e7eb"],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        rotation: -90,
+        circumference: 180,
+        cutout: "70%",
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
 });
 
-/* ================= RESET UI ================= */
+/* ================= UI HELPERS ================= */
+function showGraph() {
+  document.getElementById("chart").classList.remove("hidden");
+  document.getElementById("speedSection").classList.add("hidden");
+}
+
+function showGauge() {
+  document.getElementById("chart").classList.add("hidden");
+  document.getElementById("speedSection").classList.remove("hidden");
+}
+
+function updateGauge(valueMbps) {
+  if (!gauge) return;
+
+  const max = 100; // max scale = 100 Mbps
+  const val = Math.min(valueMbps, max);
+
+  gauge.data.datasets[0].data = [val, max - val];
+  gauge.update();
+}
+
+/* ================= RESET ================= */
 function resetUI() {
   document.getElementById("mStatus").innerText = "–";
   document.getElementById("mConfidence").innerText = "–";
@@ -72,54 +107,36 @@ function resetUI() {
     chart.data.datasets[0].data = [];
     chart.update();
   }
+
+  updateGauge(0);
 }
 
 /* ================= FETCH ================= */
 async function fetchData(type) {
   const res = await fetch(`${API_BASE}/${type}?device_id=${DEVICE_ID}`);
   const data = await res.json();
-
   if (data.error) throw new Error(data.error);
   return data;
 }
 
 /* ================= RUN ANALYSIS ================= */
 async function runAnalysis() {
+
   const type = document.getElementById("sensorType").value;
   if (!type) {
-    alert("Please select a sensor");
+    alert("Select a sensor");
     return;
   }
 
-  /* ===== Trigger Mobile Speed Test from APK ===== */
-  if (type === "mobile"||type=== "wifi") {
-    if (window.Android && typeof Android.testSpeed === "function") {
-      Android.testSpeed();
-    }
+  /* Trigger manual speed test (APK) */
+  if ((type === "mobile" || type === "wifi") &&
+      window.Android && Android.testSpeed) {
+    Android.testSpeed();
   }
 
-  /* ===== LABELS ===== */
-  const statusLabel = document.querySelector(".metrics tr:nth-child(2) td:first-child");
-  const confidenceLabel = document.querySelector(".metrics tr:nth-child(3) td:first-child");
-  const healthLabel = document.querySelector(".metrics tr:nth-child(4) td:first-child");
-
-  if (type === "battery") {
-    statusLabel.innerText = "Battery Status";
-    confidenceLabel.innerText = "Battery Reliability";
-    healthLabel.innerText = "Battery Percentage";
-  }
-
-  if (type === "wifi") {
-    statusLabel.innerText = "Connection Status";
-    confidenceLabel.innerText = "Signal Intensity";
-    healthLabel.innerText = "Signal Quality";
-  }
-
-  if (type === "mobile") {
-    statusLabel.innerText = "Network Status";
-    confidenceLabel.innerText = "Speed (KB/s)";
-    healthLabel.innerText = "Quality";
-  }
+  /* UI Mode */
+  if (type === "battery") showGraph();
+  else showGauge();
 
   resetUI();
 
@@ -127,36 +144,37 @@ async function runAnalysis() {
   countdown.classList.remove("hidden");
 
   let timeLeft = DURATION;
-  let lastValue = 0;
   let latestData = null;
 
   clearInterval(timer);
 
   timer = setInterval(async () => {
+
     countdown.innerText = `Analyzing… ${timeLeft}s`;
 
     try {
       latestData = await fetchData(type);
 
-      /* ===== GRAPH VALUES ===== */
+      /* ===== BATTERY GRAPH ===== */
       if (type === "battery") {
-        lastValue = latestData.end_percent || 0;
+        const value = latestData.end_percent || 0;
+
+        chart.data.labels.push(new Date().toLocaleTimeString());
+        chart.data.datasets[0].data.push(value);
+        chart.update();
       }
 
-      if (type === "wifi") {
-        lastValue = latestData.connected
-          ? latestData.signal_percent
-          : 0;
+      /* ===== WIFI SPEED (Mbps) ===== */
+      if (type === "wifi" && latestData.connected) {
+        const mbps = (latestData.speed_kbps || 0) / 1024;
+        updateGauge(mbps);
       }
 
-      if (type === "mobile") {
-        // FIXED: Math.min instead of Nath.min
-        lastValue = Math.min((latestData.speed_kbps || 0) / 10, 100);
+      /* ===== MOBILE SPEED (Mbps) ===== */
+      if (type === "mobile" && latestData.connected) {
+        const mbps = (latestData.speed_kbps || 0) / 1024;
+        updateGauge(mbps);
       }
-
-      chart.data.labels.push(new Date().toLocaleTimeString());
-      chart.data.datasets[0].data.push(lastValue);
-      chart.update();
 
     } catch (err) {
       clearInterval(timer);
@@ -171,95 +189,43 @@ async function runAnalysis() {
       clearInterval(timer);
       countdown.classList.add("hidden");
 
-      /* ===== BATTERY RESULT ===== */
+      /* ===== RESULTS ===== */
+
       if (type === "battery") {
-        let statusText;
-
-        if (latestData.charging) statusText = "Charging (Normal)";
-        else if (latestData.delta < 0) statusText = "Battery Consuming";
-        else statusText = "Stable Consumption";
-
-        document.getElementById("mStatus").innerText = statusText;
-        document.getElementById("mConfidence").innerText = "Trend-based";
+        document.getElementById("mStatus").innerText =
+          latestData.charging ? "Charging" : "Discharging";
+        document.getElementById("mConfidence").innerText = "Trend";
         document.getElementById("mHealth").innerText =
           latestData.end_percent + "%";
-
-        const summary = document.getElementById("summary");
-        summary.className = "summary HEALTHY";
-        summary.innerText = "Battery analysis completed";
-        summary.classList.remove("hidden");
       }
 
-      /* ===== WIFI RESULT ===== */
       if (type === "wifi") {
-        if (!latestData.connected) {
-          document.getElementById("mStatus").innerText = "Not Connected";
-          document.getElementById("mConfidence").innerText = "–";
-          document.getElementById("mHealth").innerText = "–";
-
-          const summary = document.getElementById("summary");
-          summary.className = "summary FAULTY";
-          summary.innerText = "Wi-Fi is not connected";
-          summary.classList.remove("hidden");
-          return;
-        }
-
         document.getElementById("mStatus").innerText =
-          `Connected (${latestData.ssid})`;
+          latestData.connected ? `Connected (${latestData.ssid})` : "Not Connected";
 
         document.getElementById("mConfidence").innerText =
           latestData.signal_percent + "%";
 
         document.getElementById("mHealth").innerText =
-          latestData.signal_percent >= 60 ? "Good" :
-          latestData.signal_percent >= 30 ? "Moderate" :
-          "Poor";
-
-        const summary = document.getElementById("summary");
-        summary.className =
-          latestData.signal_percent >= 60 ? "summary HEALTHY" :
-          latestData.signal_percent >= 30 ? "summary DRIFTING" :
-          "summary FAULTY";
-
-        summary.innerText = "Wi-Fi analysis completed";
-        summary.classList.remove("hidden");
+          ((latestData.speed_kbps || 0) / 1024).toFixed(1) + " Mbps";
       }
 
-      /* ===== MOBILE RESULT ===== */
       if (type === "mobile") {
-        if (!latestData.connected || latestData.speed_kbps === 0) {
-          document.getElementById("mStatus").innerText = "Not Active";
-          document.getElementById("mConfidence").innerText =
-            latestData.message || "No mobile data";
-          document.getElementById("mHealth").innerText = "–";
+        document.getElementById("mStatus").innerText =
+          latestData.connected ? "Active" : "Mobile OFF / WiFi Active";
 
-          const summary = document.getElementById("summary");
-          summary.className = "summary FAULTY";
-          summary.innerText =
-            latestData.message || "Mobile data OFF or WiFi active";
-          summary.classList.remove("hidden");
-          return;
-        }
-
-        document.getElementById("mStatus").innerText = "Active";
         document.getElementById("mConfidence").innerText =
-          latestData.speed_kbps + " KB/s";
+          ((latestData.speed_kbps || 0) / 1024).toFixed(1) + " Mbps";
 
         document.getElementById("mHealth").innerText =
-          latestData.speed_kbps >= 500 ? "Good" :
-          latestData.speed_kbps >= 150 ? "Moderate" :
-          "Slow";
-
-        const summary = document.getElementById("summary");
-        summary.className =
-          latestData.speed_kbps >= 500 ? "summary HEALTHY" :
-          latestData.speed_kbps >= 150 ? "summary DRIFTING" :
-          "summary FAULTY";
-
-        summary.innerText = "Mobile internet analysis completed";
-        summary.classList.remove("hidden");
+          latestData.message || "";
       }
 
+      const summary = document.getElementById("summary");
+      summary.className = "summary HEALTHY";
+      summary.innerText = "Analysis completed";
+      summary.classList.remove("hidden");
     }
+
   }, 1000);
 }
