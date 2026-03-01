@@ -46,7 +46,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ----- Speedometer (0–3 Mbps) ----- */
+  /* ----- Premium Speedometer (0–3 Mbps) ----- */
   const gctx = document.getElementById("speedGauge")?.getContext("2d");
   if (gctx) {
     gauge = new Chart(gctx, {
@@ -70,7 +70,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-/* ================= UI HELPERS ================= */
+/* ================= VIEW CONTROL ================= */
 
 function showGraph() {
   document.getElementById("chart").style.display = "block";
@@ -82,12 +82,36 @@ function showGauge() {
   document.getElementById("speedSection").style.display = "block";
 }
 
+/* Reset when sensor changes */
+function onSensorChange() {
+  resetUI();
+
+  if (gauge) {
+    gauge.data.datasets[0].data = [0, 3];
+    gauge.update();
+  }
+
+  const label = document.getElementById("speedValue");
+  if (label) label.innerText = "0 Mbps";
+}
+
+/* Update gauge */
 function updateGauge(mbps) {
   if (!gauge) return;
+
   const max = 3;
   const value = Math.min(mbps, max);
+
+  let color = "#ef4444";
+  if (value >= 2) color = "#22c55e";
+  else if (value >= 1) color = "#f59e0b";
+
   gauge.data.datasets[0].data = [value, max - value];
+  gauge.data.datasets[0].backgroundColor = [color, "#e5e7eb"];
   gauge.update();
+
+  const label = document.getElementById("speedValue");
+  if (label) label.innerText = value.toFixed(2) + " Mbps";
 }
 
 /* ================= RESET ================= */
@@ -127,7 +151,7 @@ async function runAnalysis() {
     return;
   }
 
-  /* Trigger speed test from APK */
+  /* Trigger manual speed test in APK */
   if ((type === "mobile" || type === "wifi") &&
       window.Android &&
       typeof Android.testSpeed === "function") {
@@ -135,17 +159,19 @@ async function runAnalysis() {
   }
 
   /* Labels */
-  document.getElementById("lStatus").innerText = "Status";
-  document.getElementById("lConfidence").innerText = "Value";
-  document.getElementById("lHealth").innerText = "Quality";
+  const lStatus = document.getElementById("lStatus");
+  const lConfidence = document.getElementById("lConfidence");
+  const lHealth = document.getElementById("lHealth");
 
   if (type === "battery") {
-    document.getElementById("lStatus").innerText = "Battery";
-    document.getElementById("lConfidence").innerText = "Percentage";
-    document.getElementById("lHealth").innerText = "State";
+    lStatus.innerText = "Battery Status";
+    lConfidence.innerText = "Battery %";
+    lHealth.innerText = "State";
     showGraph();
   } else {
-    document.getElementById("lConfidence").innerText = "Speed (Mbps)";
+    lStatus.innerText = "Connection";
+    lConfidence.innerText = "Speed";
+    lHealth.innerText = "Quality";
     showGauge();
   }
 
@@ -169,7 +195,6 @@ async function runAnalysis() {
       /* ===== BATTERY ===== */
       if (type === "battery") {
         const value = latestData.end_percent || 0;
-
         chart.data.labels.push(new Date().toLocaleTimeString());
         chart.data.datasets[0].data.push(value);
         chart.update();
@@ -181,7 +206,7 @@ async function runAnalysis() {
           value + "%";
 
         document.getElementById("mHealth").innerText =
-          value >= 40 ? "Normal" : "Low";
+          value >= 50 ? "Normal" : "Low";
       }
 
       /* ===== WIFI ===== */
@@ -189,8 +214,6 @@ async function runAnalysis() {
 
         if (!latestData.connected) {
           document.getElementById("mStatus").innerText = "Not Connected";
-          document.getElementById("mConfidence").innerText = "–";
-          document.getElementById("mHealth").innerText = "–";
           return;
         }
 
@@ -204,8 +227,8 @@ async function runAnalysis() {
           mbps.toFixed(2) + " Mbps";
 
         document.getElementById("mHealth").innerText =
-          mbps >= 2 ? "Strong" :
-          mbps >= 1 ? "Moderate" :
+          latestData.signal_percent >= 60 ? "Strong" :
+          latestData.signal_percent >= 30 ? "Moderate" :
           "Weak";
       }
 
@@ -215,8 +238,6 @@ async function runAnalysis() {
         if (!latestData.connected) {
           document.getElementById("mStatus").innerText =
             latestData.message || "Mobile OFF";
-          document.getElementById("mConfidence").innerText = "–";
-          document.getElementById("mHealth").innerText = "–";
           return;
         }
 
@@ -224,7 +245,6 @@ async function runAnalysis() {
         updateGauge(mbps);
 
         document.getElementById("mStatus").innerText = "Active";
-
         document.getElementById("mConfidence").innerText =
           mbps.toFixed(2) + " Mbps";
 
@@ -250,27 +270,12 @@ async function runAnalysis() {
       const summary = document.getElementById("summary");
       summary.classList.remove("hidden");
 
-      if (type === "battery") {
-        summary.innerText =
-          latestData.charging ? "Battery charging normally"
-                              : "Battery consumption normal";
-      }
-
-      if (type === "wifi") {
-        const mbps = (latestData.speed_kbps || 0) / 1024;
-        summary.innerText =
-          mbps >= 2 ? "Strong WiFi connection"
-          : mbps >= 1 ? "Moderate WiFi connection"
-          : "Weak WiFi connection";
-      }
-
-      if (type === "mobile") {
-        const mbps = (latestData.speed_kbps || 0) / 1024;
-        summary.innerText =
-          mbps >= 2 ? "Mobile internet is fast"
-          : mbps >= 1 ? "Mobile internet is moderate"
-          : "Mobile internet is slow";
-      }
+      if (type === "battery")
+        summary.innerText = latestData.charging ? "Battery charging normally" : "Battery consumption normal";
+      if (type === "wifi")
+        summary.innerText = "WiFi quality analysis completed";
+      if (type === "mobile")
+        summary.innerText = "Mobile speed analysis completed";
     }
 
   }, 1000);
