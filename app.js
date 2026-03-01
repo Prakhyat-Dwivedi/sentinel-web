@@ -9,7 +9,7 @@ function getDeviceId() {
     return Android.getDeviceId();
   }
 
-  // Browser → fixed to your laptop agent
+  // Browser fallback
   return "Prakhyat";
 }
 
@@ -49,7 +49,7 @@ window.addEventListener("DOMContentLoaded", () => {
           grid: { display: false }
         },
         y: {
-          beginAtZero:true,
+          beginAtZero: true,
           title: { display: true, text: "Value" }
         }
       }
@@ -89,6 +89,13 @@ async function runAnalysis() {
   if (!type) {
     alert("Please select a sensor");
     return;
+  }
+
+  /* ===== Trigger Mobile Speed Test from APK ===== */
+  if (type === "mobile") {
+    if (window.Android && typeof Android.testSpeed === "function") {
+      Android.testSpeed();
+    }
   }
 
   /* ===== LABELS ===== */
@@ -143,10 +150,8 @@ async function runAnalysis() {
       }
 
       if (type === "mobile") {
-        if(!latestData.speed_kbps){
-          throw new Error("Phone data not available.Open Setinel app on phone");
-        }
-        lastValue =Nath.min( latestData.speed_kbps/10,100);
+        // FIXED: Math.min instead of Nath.min
+        lastValue = Math.min((latestData.speed_kbps || 0) / 10, 100);
       }
 
       chart.data.labels.push(new Date().toLocaleTimeString());
@@ -170,13 +175,9 @@ async function runAnalysis() {
       if (type === "battery") {
         let statusText;
 
-        if (latestData.charging) {
-          statusText = "Charging (Normal)";
-        } else if (latestData.delta < 0) {
-          statusText = "Battery Consuming";
-        } else {
-          statusText = "Stable Consumption";
-        }
+        if (latestData.charging) statusText = "Charging (Normal)";
+        else if (latestData.delta < 0) statusText = "Battery Consuming";
+        else statusText = "Stable Consumption";
 
         document.getElementById("mStatus").innerText = statusText;
         document.getElementById("mConfidence").innerText = "Trend-based";
@@ -191,7 +192,6 @@ async function runAnalysis() {
 
       /* ===== WIFI RESULT ===== */
       if (type === "wifi") {
-
         if (!latestData.connected) {
           document.getElementById("mStatus").innerText = "Not Connected";
           document.getElementById("mConfidence").innerText = "–";
@@ -226,46 +226,40 @@ async function runAnalysis() {
       }
 
       /* ===== MOBILE RESULT ===== */
-if (type === "mobile") {
+      if (type === "mobile") {
+        if (!latestData.connected || latestData.speed_kbps === 0) {
+          document.getElementById("mStatus").innerText = "Not Active";
+          document.getElementById("mConfidence").innerText =
+            latestData.message || "No mobile data";
+          document.getElementById("mHealth").innerText = "–";
 
-  if (!latestData.connected || latestData.speed_kbps === 0) {
-    document.getElementById("mStatus").innerText = "Not Active";
-    document.getElementById("mConfidence").innerText = latestData.message || "No mobile data";
-    document.getElementById("mHealth").innerText = "–";
+          const summary = document.getElementById("summary");
+          summary.className = "summary FAULTY";
+          summary.innerText =
+            latestData.message || "Mobile data OFF or WiFi active";
+          summary.classList.remove("hidden");
+          return;
+        }
 
-    const summary = document.getElementById("summary");
-    summary.className = "summary FAULTY";
-    summary.innerText = latestData.message || "Mobile data is OFF or WiFi is active";
-    summary.classList.remove("hidden");
-    return;
-  }
+        document.getElementById("mStatus").innerText = "Active";
+        document.getElementById("mConfidence").innerText =
+          latestData.speed_kbps + " KB/s";
 
-  document.getElementById("mStatus").innerText = "Active";
+        document.getElementById("mHealth").innerText =
+          latestData.speed_kbps >= 500 ? "Good" :
+          latestData.speed_kbps >= 150 ? "Moderate" :
+          "Slow";
 
-  document.getElementById("mConfidence").innerText =
-    latestData.speed_kbps + " KB/s";
+        const summary = document.getElementById("summary");
+        summary.className =
+          latestData.speed_kbps >= 500 ? "summary HEALTHY" :
+          latestData.speed_kbps >= 150 ? "summary DRIFTING" :
+          "summary FAULTY";
 
-  document.getElementById("mHealth").innerText =
-    latestData.speed_kbps >= 500 ? "Good" :
-    latestData.speed_kbps >= 150 ? "Moderate" :
-    "Slow";
+        summary.innerText = "Mobile internet analysis completed";
+        summary.classList.remove("hidden");
+      }
 
-  const summary = document.getElementById("summary");
-  summary.className =
-    "summary " +
-    (latestData.speed_kbps >= 500 ? "HEALTHY" :
-     latestData.speed_kbps >= 150 ? "DRIFTING" :
-     "FAULTY");
-
-  summary.innerText =
-    latestData.speed_kbps >= 500
-      ? "Internet speed is good"
-      : latestData.speed_kbps >= 150
-      ? "Internet speed is moderate"
-      : "Internet speed is slow";
-
-  summary.classList.remove("hidden");
-}
     }
   }, 1000);
 }
