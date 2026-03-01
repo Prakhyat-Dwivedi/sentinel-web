@@ -19,7 +19,7 @@ let timer = null;
 /* ================= INIT UI ================= */
 window.addEventListener("DOMContentLoaded", () => {
 
-  /* ----- Line Graph (Battery only) ----- */
+  /* ----- Battery Graph ----- */
   const ctx = document.getElementById("chart")?.getContext("2d");
   if (ctx) {
     chart = new Chart(ctx, {
@@ -46,7 +46,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ----- Speedometer (WiFi & Mobile) ----- */
+  /* ----- Speedometer (0–3 Mbps) ----- */
   const gctx = document.getElementById("speedGauge")?.getContext("2d");
   if (gctx) {
     gauge = new Chart(gctx, {
@@ -96,7 +96,10 @@ function resetUI() {
   document.getElementById("mStatus").innerText = "–";
   document.getElementById("mConfidence").innerText = "–";
   document.getElementById("mHealth").innerText = "–";
-  document.getElementById("summary").classList.add("hidden");
+
+  const summary = document.getElementById("summary");
+  summary.classList.add("hidden");
+  summary.innerText = "";
 
   if (chart) {
     chart.data.labels = [];
@@ -124,21 +127,21 @@ async function runAnalysis() {
     return;
   }
 
-  /* ----- Trigger manual speed test for APK ----- */
+  /* Trigger speed test from APK */
   if ((type === "mobile" || type === "wifi") &&
       window.Android &&
       typeof Android.testSpeed === "function") {
     Android.testSpeed();
   }
 
-  /* ----- Set metric labels ----- */
+  /* Labels */
   document.getElementById("lStatus").innerText = "Status";
   document.getElementById("lConfidence").innerText = "Value";
   document.getElementById("lHealth").innerText = "Quality";
 
   if (type === "battery") {
-    document.getElementById("lStatus").innerText = "Battery Status";
-    document.getElementById("lConfidence").innerText = "Battery %";
+    document.getElementById("lStatus").innerText = "Battery";
+    document.getElementById("lConfidence").innerText = "Percentage";
     document.getElementById("lHealth").innerText = "State";
     showGraph();
   } else {
@@ -163,12 +166,22 @@ async function runAnalysis() {
     try {
       latestData = await fetchData(type);
 
-      /* ===== BATTERY GRAPH ===== */
+      /* ===== BATTERY ===== */
       if (type === "battery") {
         const value = latestData.end_percent || 0;
+
         chart.data.labels.push(new Date().toLocaleTimeString());
         chart.data.datasets[0].data.push(value);
         chart.update();
+
+        document.getElementById("mStatus").innerText =
+          latestData.charging ? "Charging" : "Discharging";
+
+        document.getElementById("mConfidence").innerText =
+          value + "%";
+
+        document.getElementById("mHealth").innerText =
+          value >= 40 ? "Normal" : "Low";
       }
 
       /* ===== WIFI ===== */
@@ -191,16 +204,19 @@ async function runAnalysis() {
           mbps.toFixed(2) + " Mbps";
 
         document.getElementById("mHealth").innerText =
-          latestData.signal_percent + "% Signal";
+          mbps >= 2 ? "Strong" :
+          mbps >= 1 ? "Moderate" :
+          "Weak";
       }
 
       /* ===== MOBILE ===== */
       if (type === "mobile") {
 
         if (!latestData.connected) {
-          document.getElementById("mStatus").innerText = "Mobile OFF";
-          document.getElementById("mConfidence").innerText =
-            latestData.message || "No data";
+          document.getElementById("mStatus").innerText =
+            latestData.message || "Mobile OFF";
+          document.getElementById("mConfidence").innerText = "–";
+          document.getElementById("mHealth").innerText = "–";
           return;
         }
 
@@ -208,6 +224,7 @@ async function runAnalysis() {
         updateGauge(mbps);
 
         document.getElementById("mStatus").innerText = "Active";
+
         document.getElementById("mConfidence").innerText =
           mbps.toFixed(2) + " Mbps";
 
@@ -229,9 +246,31 @@ async function runAnalysis() {
     if (timeLeft < 0) {
       clearInterval(timer);
       countdown.classList.add("hidden");
-      document.getElementById("summary").classList.remove("hidden");
-      document.getElementById("summary").innerText =
-        "Analysis completed";
+
+      const summary = document.getElementById("summary");
+      summary.classList.remove("hidden");
+
+      if (type === "battery") {
+        summary.innerText =
+          latestData.charging ? "Battery charging normally"
+                              : "Battery consumption normal";
+      }
+
+      if (type === "wifi") {
+        const mbps = (latestData.speed_kbps || 0) / 1024;
+        summary.innerText =
+          mbps >= 2 ? "Strong WiFi connection"
+          : mbps >= 1 ? "Moderate WiFi connection"
+          : "Weak WiFi connection";
+      }
+
+      if (type === "mobile") {
+        const mbps = (latestData.speed_kbps || 0) / 1024;
+        summary.innerText =
+          mbps >= 2 ? "Mobile internet is fast"
+          : mbps >= 1 ? "Mobile internet is moderate"
+          : "Mobile internet is slow";
+      }
     }
 
   }, 1000);
