@@ -20,6 +20,7 @@ let timer = null;
 /* ================= INIT UI ================= */
 window.addEventListener("DOMContentLoaded", () => {
 
+  /* ----- Battery Graph ----- */
   const ctx = document.getElementById("chart")?.getContext("2d");
   if (ctx) {
     chart = new Chart(ctx, {
@@ -45,6 +46,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  /* ----- Speedometer (0–5 Mbps) ----- */
   const gctx = document.getElementById("speedGauge")?.getContext("2d");
   if (gctx) {
     gauge = new Chart(gctx, {
@@ -71,6 +73,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
 function updateGauge(mbps) {
   if (!gauge) return;
+
   const value = Math.min(mbps, MAX_MBPS);
   gauge.data.datasets[0].data = [value, MAX_MBPS - value];
   gauge.update();
@@ -131,16 +134,18 @@ async function runAnalysis() {
   clearInterval(timer);
   resetUI();
 
+  /* Trigger manual speed test for APK */
   if ((type === "mobile" || type === "wifi") &&
       window.Android &&
       typeof Android.testSpeed === "function") {
     Android.testSpeed();
   }
 
+  /* ===== LABELS ===== */
   if (type === "battery") {
     document.getElementById("lStatus").innerText = "Battery Status";
     document.getElementById("lConfidence").innerText = "Battery %";
-    document.getElementById("lHealth").innerText = "State";
+    document.getElementById("lHealth").innerText = "Consumption";
     showGraph();
   }
 
@@ -163,7 +168,6 @@ async function runAnalysis() {
 
   let timeLeft = DURATION;
   let latestData = null;
-  let startPercent = null;
 
   timer = setInterval(async () => {
 
@@ -172,36 +176,37 @@ async function runAnalysis() {
     try {
       latestData = await fetchData(type);
 
-      /* ===== BATTERY (FIXED — OLD LOGIC) ===== */
+      /* ===== BATTERY (FINAL FIX) ===== */
       if (type === "battery") {
 
         const value = latestData.end_percent || 0;
+        const isCharging = latestData.charging === true;
+        const delta = latestData.delta || 0;
 
-        if (startPercent === null) {
-          startPercent = value;
-        }
-
+        // Graph
         chart.data.labels.push(new Date().toLocaleTimeString());
         chart.data.datasets[0].data.push(value);
         chart.update();
 
-        let statusText;
+        // Table
+        document.getElementById("mStatus").innerText =
+          isCharging ? "Charging" : "Discharging";
 
-        if (latestData.charging) {
-          statusText = "Charging";
-        } else if (value < startPercent) {
-          statusText = "Discharging";
+        document.getElementById("mConfidence").innerText =
+          value + "%";
+
+        if (isCharging) {
+          document.getElementById("mHealth").innerText =
+            "Charging (Consumption paused)";
         } else {
-          statusText = "Stable";
+          document.getElementById("mHealth").innerText =
+            Math.abs(delta) >= 2
+              ? "High Consumption"
+              : "Normal Consumption";
         }
-
-        document.getElementById("mStatus").innerText = statusText;
-        document.getElementById("mConfidence").innerText = value + "%";
-        document.getElementById("mHealth").innerText =
-          value >= 40 ? "Normal" : "Low";
       }
 
-      /* ===== WIFI (UNCHANGED) ===== */
+      /* ===== WIFI ===== */
       if (type === "wifi") {
 
         if (!latestData.connected) {
@@ -233,7 +238,7 @@ async function runAnalysis() {
           mbps >= 1 ? "Moderate" : "Slow";
       }
 
-      /* ===== MOBILE (UNCHANGED) ===== */
+      /* ===== MOBILE ===== */
       if (type === "mobile") {
 
         if (!latestData.connected) {
@@ -281,27 +286,22 @@ async function runAnalysis() {
       const summary = document.getElementById("summary");
       summary.classList.remove("hidden");
 
-      /* ===== BATTERY RESULT (OLD STYLE) ===== */
+      /* Battery Summary */
       if (type === "battery") {
+        const isCharging = latestData.charging === true;
+        const delta = latestData.delta || 0;
 
-        let message;
-
-        if (latestData.charging) {
-          message = "Charging Normally";
-          summary.className = "summary HEALTHY";
+        if (isCharging) {
+          summary.innerText = "Battery is Charging";
+        } else {
+          summary.innerText =
+            Math.abs(delta) >= 2
+              ? "High Battery Consumption"
+              : "Battery Consumption Normal";
         }
-        else if (latestData.end_percent < startPercent) {
-          message = "Battery Consumption Detected";
-          summary.className = "summary DRIFTING";
-        }
-        else {
-          message = "Normal Consumption";
-          summary.className = "summary HEALTHY";
-        }
-
-        summary.innerText = message;
       }
 
+      /* WiFi Summary */
       if (type === "wifi") {
         const mbps = (latestData.speed_kbps || 0) / 1024;
         summary.innerText =
@@ -310,6 +310,7 @@ async function runAnalysis() {
           "Weak Connection";
       }
 
+      /* Mobile Summary */
       if (type === "mobile") {
         const mbps = (latestData.speed_kbps || 0) / 1024;
         summary.innerText =
