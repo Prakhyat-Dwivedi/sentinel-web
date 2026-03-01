@@ -24,13 +24,19 @@
 
 <!-- ================= CONTROLS ================= -->
 <div class="controls">
-  <select id="sensorType">
+  <select id="sensorType" onchange="toggleSpeedButton()">
     <option value="">Select Sensor</option>
     <option value="battery">Battery Consumption Analysis</option>
     <option value="wifi">WiFi Quality</option>
     <option value="mobile">Phone Internet Speed</option>
   </select>
+
   <button onclick="runAnalysis()">Run Analysis</button>
+
+  <!-- Manual Speed Test (APK only) -->
+  <button id="speedBtn" class="hidden" onclick="runManualSpeedTest()">
+    Test Speed
+  </button>
 </div>
 
 <!-- ================= COUNTDOWN ================= -->
@@ -67,7 +73,32 @@
 <!-- ================= SUMMARY ================= -->
 <div id="summary" class="summary hidden"></div>
 
-<!-- ================= SCRIPT ================= -->
+<!-- ================= PAGE SCRIPT ================= -->
+<script>
+/* Show button only for Mobile */
+function toggleSpeedButton() {
+  const type = document.getElementById("sensorType").value;
+  const btn = document.getElementById("speedBtn");
+
+  if (type === "mobile") {
+    btn.classList.remove("hidden");
+  } else {
+    btn.classList.add("hidden");
+  }
+}
+
+/* Manual Speed Test (APK only) */
+function runManualSpeedTest() {
+  if (window.Android && Android.testSpeed) {
+    Android.testSpeed();
+    alert("Speed test started. Run Analysis after few seconds.");
+  } else {
+    alert("Manual speed test works only in mobile app.");
+  }
+}
+</script>
+
+<!-- Main App Logic -->
 <script src="./app.js"></script>
 
 </body>
