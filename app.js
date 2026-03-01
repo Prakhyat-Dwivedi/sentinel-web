@@ -92,7 +92,7 @@ async function runAnalysis() {
   }
 
   /* ===== Trigger Mobile Speed Test from APK ===== */
-  if (type === "mobile") {
+  if (type === "mobile"||type=== "wifi") {
     if (window.Android && typeof Android.testSpeed === "function") {
       Android.testSpeed();
     }
