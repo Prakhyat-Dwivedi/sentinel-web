@@ -20,7 +20,6 @@ let timer = null;
 /* ================= INIT UI ================= */
 window.addEventListener("DOMContentLoaded", () => {
 
-  /* ----- Battery Graph ----- */
   const ctx = document.getElementById("chart")?.getContext("2d");
   if (ctx) {
     chart = new Chart(ctx, {
@@ -46,7 +45,6 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ----- Speedometer (0–5 Mbps) ----- */
   const gctx = document.getElementById("speedGauge")?.getContext("2d");
   if (gctx) {
     gauge = new Chart(gctx, {
@@ -73,7 +71,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
 function updateGauge(mbps) {
   if (!gauge) return;
-
   const value = Math.min(mbps, MAX_MBPS);
   gauge.data.datasets[0].data = [value, MAX_MBPS - value];
   gauge.update();
@@ -134,14 +131,12 @@ async function runAnalysis() {
   clearInterval(timer);
   resetUI();
 
-  /* Trigger manual speed test for APK */
   if ((type === "mobile" || type === "wifi") &&
       window.Android &&
       typeof Android.testSpeed === "function") {
     Android.testSpeed();
   }
 
-  /* ===== LABELS (same as your old version) ===== */
   if (type === "battery") {
     document.getElementById("lStatus").innerText = "Battery Status";
     document.getElementById("lConfidence").innerText = "Battery %";
@@ -168,6 +163,7 @@ async function runAnalysis() {
 
   let timeLeft = DURATION;
   let latestData = null;
+  let startPercent = null;
 
   timer = setInterval(async () => {
 
@@ -176,25 +172,36 @@ async function runAnalysis() {
     try {
       latestData = await fetchData(type);
 
-      /* ===== BATTERY ===== */
+      /* ===== BATTERY (FIXED — OLD LOGIC) ===== */
       if (type === "battery") {
+
         const value = latestData.end_percent || 0;
+
+        if (startPercent === null) {
+          startPercent = value;
+        }
 
         chart.data.labels.push(new Date().toLocaleTimeString());
         chart.data.datasets[0].data.push(value);
         chart.update();
 
-        document.getElementById("mStatus").innerText =
-          latestData.charging ? "Charging" : "Discharging";
+        let statusText;
 
-        document.getElementById("mConfidence").innerText =
-          value + "%";
+        if (latestData.charging) {
+          statusText = "Charging";
+        } else if (value < startPercent) {
+          statusText = "Discharging";
+        } else {
+          statusText = "Stable";
+        }
 
+        document.getElementById("mStatus").innerText = statusText;
+        document.getElementById("mConfidence").innerText = value + "%";
         document.getElementById("mHealth").innerText =
           value >= 40 ? "Normal" : "Low";
       }
 
-      /* ===== WIFI ===== */
+      /* ===== WIFI (UNCHANGED) ===== */
       if (type === "wifi") {
 
         if (!latestData.connected) {
@@ -226,7 +233,7 @@ async function runAnalysis() {
           mbps >= 1 ? "Moderate" : "Slow";
       }
 
-      /* ===== MOBILE ===== */
+      /* ===== MOBILE (UNCHANGED) ===== */
       if (type === "mobile") {
 
         if (!latestData.connected) {
@@ -274,20 +281,33 @@ async function runAnalysis() {
       const summary = document.getElementById("summary");
       summary.classList.remove("hidden");
 
+      /* ===== BATTERY RESULT (OLD STYLE) ===== */
       if (type === "battery") {
-        summary.innerText =
-          latestData.end_percent >= 40
-            ? "Battery Health Normal"
-            : "Battery Level Low";
+
+        let message;
+
+        if (latestData.charging) {
+          message = "Charging Normally";
+          summary.className = "summary HEALTHY";
+        }
+        else if (latestData.end_percent < startPercent) {
+          message = "Battery Consumption Detected";
+          summary.className = "summary DRIFTING";
+        }
+        else {
+          message = "Normal Consumption";
+          summary.className = "summary HEALTHY";
+        }
+
+        summary.innerText = message;
       }
 
       if (type === "wifi") {
+        const mbps = (latestData.speed_kbps || 0) / 1024;
         summary.innerText =
-          (latestData.speed_kbps || 0) / 1024 > 3
-            ? "Strong Connection"
-            : (latestData.speed_kbps || 0) / 1024 >= 1
-            ? "Moderate Connection"
-            : "Weak Connection";
+          mbps > 3 ? "Strong Connection" :
+          mbps >= 1 ? "Moderate Connection" :
+          "Weak Connection";
       }
 
       if (type === "mobile") {
