@@ -138,7 +138,7 @@ async function fetchData(type) {
 
 async function runAnalysis() {
 
-  document.querySelector(".dashboard").style.display = "flex";
+  document.querySelector(".dashboard").style.display = "block";
 
   const type = document.getElementById("sensorType").value;
   if (!type) {
