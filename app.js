@@ -132,9 +132,9 @@ async function fetchData(type) {
 
 /* ================= RUN ANALYSIS ================= */
 
-document.querySelection(".dashboard").classList.remove("hidden");
-
 async function runAnalysis() {
+
+  document.querySelection(".dashboard").classList.remove("hidden");
 
   const type = document.getElementById("sensorType").value;
   if (!type) {
