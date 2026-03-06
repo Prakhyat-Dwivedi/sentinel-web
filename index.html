@@ -5,23 +5,18 @@
   <title>Sentinel – Sensor Intelligence</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Styles -->
   <link rel="stylesheet" href="style.css" />
-
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
 
-<!-- ================= HEADER ================= -->
 <header class="app-header">
   <h1>Sentinel</h1>
 </header>
 
 <h2>📊 Sentinel – Sensor Intelligence</h2>
 
-<!-- ================= CONTROLS ================= -->
 <div class="controls">
   <select id="sensorType">
     <option value="">Select Sensor</option>
@@ -33,24 +28,26 @@
   <button onclick="runAnalysis()">Run Analysis</button>
 </div>
 
-<!-- ================= COUNTDOWN ================= -->
 <div id="countdown" class="countdown hidden"></div>
 
-<!-- ================= DASHBOARD ================= -->
 <div class="dashboard" style="display:none;">
 
-  <!-- Battery Graph -->
   <canvas id="chart" style="height:260px;"></canvas>
 
-  <!-- Speedometer (WiFi & Mobile) -->
-  <div id="speedSection" class="hidden" style="display:none; text-align:center;">
+  <div id="speedSection" style="display:none; text-align:center; margin-top:20px;">
+    
     <canvas id="speedGauge" style="height:220px;"></canvas>
-    <div id="speedValue" style="font-size:22px; font-weight:600; margin-top:8px;">
+
+    <div id="speedValue"
+         style="font-size:22px;
+                font-weight:600;
+                margin-top:10px;
+                color:#2563eb;">
       0 Mbps
     </div>
+
   </div>
 
-  <!-- ================= METRICS TABLE ================= -->
   <table class="metrics">
     <tr>
       <th>Metric</th>
@@ -72,10 +69,8 @@
 
 </div>
 
-<!-- ================= RESULT SUMMARY ================= -->
 <div id="summary" class="summary hidden"></div>
 
-<!-- ================= APP SCRIPT ================= -->
 <script src="./app.js"></script>
 
 </body>
