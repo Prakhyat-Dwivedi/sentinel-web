@@ -132,6 +132,8 @@ async function fetchData(type) {
 
 /* ================= RUN ANALYSIS ================= */
 
+document.querySelection(".dashboard").classList.remove("hidden");
+
 async function runAnalysis() {
 
   const type = document.getElementById("sensorType").value;
