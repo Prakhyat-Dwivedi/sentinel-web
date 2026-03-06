@@ -25,6 +25,11 @@ let batteryChargingChanged = false;
 /* ================= INIT UI ================= */
 window.addEventListener("DOMContentLoaded", () => {
 
+  /* Hide dashboard when sensor changes */
+  document.getElementById("sensorType").addEventListener("change", () => {
+    document.querySelector(".dashboard").style.display = "none";
+  });
+
   /* ----- Battery Graph ----- */
   const ctx = document.getElementById("chart")?.getContext("2d");
   if (ctx) {
@@ -115,7 +120,6 @@ function resetUI() {
 
   updateGauge(0);
 
-  /* reset battery tracking */
   batteryStartPercent = null;
   batteryStartCharging = null;
   batteryChargingChanged = false;
@@ -134,7 +138,7 @@ async function fetchData(type) {
 
 async function runAnalysis() {
 
-  document.querySelection(".dashboard").style.display="flex";
+  document.querySelector(".dashboard").style.display = "flex";
 
   const type = document.getElementById("sensorType").value;
   if (!type) {
@@ -145,14 +149,12 @@ async function runAnalysis() {
   clearInterval(timer);
   resetUI();
 
-  /* Trigger speed test for APK */
   if ((type === "mobile" || type === "wifi") &&
       window.Android &&
       typeof Android.testSpeed === "function") {
     Android.testSpeed();
   }
 
-  /* ===== LABELS ===== */
   if (type === "battery") {
     document.getElementById("lStatus").innerText = "Battery Status";
     document.getElementById("lConfidence").innerText = "Battery %";
@@ -180,7 +182,6 @@ async function runAnalysis() {
   let timeLeft = DURATION;
   let latestData = null;
 
-  /* During analysis show placeholder (battery only) */
   if (type === "battery") {
     document.getElementById("mStatus").innerText = "Analyzing...";
     document.getElementById("mConfidence").innerText = "–";
@@ -194,30 +195,25 @@ async function runAnalysis() {
     try {
       latestData = await fetchData(type);
 
-      /* ===== BATTERY (UPDATED LOGIC) ===== */
       if (type === "battery") {
 
         const value = latestData.end_percent || 0;
         const charging = latestData.charging;
 
-        /* Save start values once */
         if (batteryStartPercent === null) {
           batteryStartPercent = value;
           batteryStartCharging = charging;
         }
 
-        /* Detect charging change */
         if (charging !== batteryStartCharging) {
           batteryChargingChanged = true;
         }
 
-        /* Graph updates live */
         chart.data.labels.push(new Date().toLocaleTimeString());
         chart.data.datasets[0].data.push(value);
         chart.update();
       }
 
-      /* ===== WIFI ===== */
       if (type === "wifi") {
 
         if (!latestData.connected) {
@@ -249,7 +245,6 @@ async function runAnalysis() {
           mbps >= 1 ? "Moderate" : "Slow";
       }
 
-      /* ===== MOBILE ===== */
       if (type === "mobile") {
 
         if (!latestData.connected) {
@@ -297,7 +292,6 @@ async function runAnalysis() {
       const summary = document.getElementById("summary");
       summary.classList.remove("hidden");
 
-      /* ===== FINAL BATTERY RESULT ===== */
       if (type === "battery") {
 
         const endPercent = latestData.end_percent || 0;
@@ -331,7 +325,6 @@ async function runAnalysis() {
         document.getElementById("mHealth").innerText = consumptionText;
       }
 
-      /* ===== WIFI SUMMARY ===== */
       if (type === "wifi") {
         const mbps = (latestData.speed_kbps || 0) / 1024;
         summary.innerText =
@@ -340,7 +333,6 @@ async function runAnalysis() {
           "Weak Connection";
       }
 
-      /* ===== MOBILE SUMMARY ===== */
       if (type === "mobile") {
         const mbps = (latestData.speed_kbps || 0) / 1024;
         summary.innerText =
